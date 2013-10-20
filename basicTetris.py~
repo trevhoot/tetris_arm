@@ -80,7 +80,6 @@ class Board():
 		lowest = self.tryPiece()
 		orientation, index = choice(lowest)
 		self.landPiece(orientation, index)
-                return orientation, index
 
 	def newPiece(self, letter = 0):
                 if letter == 0:
