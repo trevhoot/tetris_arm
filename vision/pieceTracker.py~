@@ -16,25 +16,12 @@ def readFrame(image):
         frame = image
 
     print type (frame)
-	# define ROI
-    x1 = 700
-    x2 = 1000
-    y1 = 175
-    y2 = 325
-    frame = frame[y1:y2, x1:x2]
 
     # smooth it
     frame = cv2.blur(frame,(3,3))
 
-    # convert to hsv and find range of colors
-    hsv = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
-    colormin = (0,0, 200)
-    colormax = (255, 20, 255)
-    thresh = cv2.inRange(hsv,np.array(colormin), np.array(colormax))
-    thresh2 = thresh.copy()
-
     # find contours in the threshold image
-    contours,hierarchy = cv2.findContours(thresh,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(thresh,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
 
     # finding contour with maximum area and store it as best_cnt
     max_area = 0
@@ -76,47 +63,6 @@ def readFrame(image):
     cv2.imshow('thresh',thresh2)
 
     return (cx, cy), poslist
-
-
-def whatPiece(corners):
-    xy = zip(*corners)
-    xs = xy[0]
-    ys = xy[1]
-    xmin = min(xs)
-    xmax = max(xs)
-    ymin = min(ys)
-    ymax = max(ys)
-    width = xmax - xmin
-    height = ymax - ymin
-
-    # Scale the pieces to combinations of four unit squares. (Blocks must be pretty much orthogonal)
-    scalefactor = 15
-    slop = 5
-    corners = [( (x - xmin+slop)/scalefactor, (y - ymin + 5)/scalefactor) for x, y in corners]
-    corners.sort()
-
-    			# Do so many unit tests on these oh my gawd
-			# Make this output orientation (from basicTetris)
-    if len(corners) == 4:	#I or O
-        if corners == [(0,0),(0,1),(4,0),(4,1)] or [(0,0),(0,4),(1,0),(1,4)]:
-            piece = 'i'
-        if corners == [(0,0),(0,2),(2,0),(2,2)]:
-            piece = 'o'
-
-    if len(corners) == 6:	#L or J
-        if corners == [(0,0),(0,3),(1,0),(1,2),(2,2),(2,3)] or [(0,1),(0,2),(2,0),(2,1),(3,0),(3,2)] or [(0,0),(0,1),(1,1),(1,3),(2,0),(2,3)] or [(0,0),(0,2),(1,1),(1,2),(3,0),(3,1)]:
-            piece = 'l'
-        if corners == [(0,2),(0,3),(1,0),(1,2),(2,0),(2,3)] or [(0,0),(0,1),(2,1),(2,2),(3,0),(3,2)] or [(0,0),(0,3),(1,1),(1,3),(2,0),(2,1)] or [(0,0),(0,2),(1,0),(1,1),(3,1),(3,2)]:
-            piece = 'j'
-
-    if len(corners) >= 8:	#T, S or Z
-        if corners == [(0,0),(0,1),(1,1),(1,2),(2,0),(2,1),(3,1),(3,2)] or [(0,1),(0,3),(1,0),(1,1),(1,2),(1,3),(2,0),(2,2)]:
-            piece = 'z'
-        if corners == [(0,1),(0,2),(1,0),(1,1),(2,1),(2,2),(3,0),(3,1)] or [(0,0),(0,2),(1,0),(1,1),(1,2),(1,3),(2,1),(2,3)]:
-            piece = 's'
-
-    return piece, 0
-
     
 
 

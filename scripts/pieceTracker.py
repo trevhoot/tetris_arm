@@ -15,13 +15,11 @@ def readFrame(image):
     else:
         frame = image
 
-    print type (frame)
-
     # smooth it
     frame = cv2.blur(frame,(3,3))
 
     # find contours in the threshold image
-    contours, hierarchy = cv2.findContours(thresh,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     # finding contour with maximum area and store it as best_cnt
     max_area = 0
@@ -60,7 +58,7 @@ def readFrame(image):
 
     # Show it, if key pressed is 'Esc', exit the loop
     cv2.imshow('frame',frame)
-    cv2.imshow('thresh',thresh2)
+    #cv2.imshow('thresh',thresh2)
 
     return (cx, cy), poslist
     

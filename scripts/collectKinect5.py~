@@ -15,6 +15,10 @@ from sensor_msgs.msg import Image
 #for converting ros image to cv image
 from cv_bridge import CvBridge, CvBridgeError
 
+
+#for processing test
+import pieceTracker as pt
+
 """
 dependencies needed for manifest to run: 
 sensor_msgs
@@ -35,7 +39,6 @@ class image_converter:
     cv.namedWindow("Image window", 1)
     self.bridge = CvBridge()
     self.image_sub = rospy.Subscriber("camera/depth/image_raw", Image,self.callback)
-    self.image_sub = rospy.Subscriber("camera/depth_registered/image_raw", Image,self.callback)
 
   def callback(self,data):
     try:
@@ -44,27 +47,20 @@ class image_converter:
     except CvBridgeError, e:
       print e
 
-    crop_image = cv_image[70:240,80:545]
+	#parse out RIO (the tredmill area)
+    crop_image = cv_image[70:240,100:545]
     
     crop_image = (numpy.asanyarray(crop_image) -1000) *400
-
-    #crop_image = crop_image*500
-
-
     cols, rows = crop_image.shape
     crop_image = (crop_image/2.**8).astype(numpy.uint8)
-    #print crop_image[100]
 
-    #new_image = crop_image/256
-    new_image = crop_image
-    print crop_image.dtype
-    #thresh = cv2.adaptiveThreshold(new_image,110,1,1,7,10)
-    thresh, thresh1 = cv2.threshold(new_image, 110, 250, cv2.THRESH_BINARY)
-    print type(thresh)
+    thresh, thresh1 = cv2.threshold(crop_image, 110, 250, cv2.THRESH_BINARY_INV)
 
     #Display image 
     cv.imshow("Image window", thresh1)
     cv.waitKey(3)
+    pt.readFrame(thresh1)
+	
 
     try:
       self.image_pub.publish(self.bridge.cv_to_imgmsg(cv_image))
