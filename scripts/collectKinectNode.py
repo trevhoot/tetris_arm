@@ -8,6 +8,7 @@ import rospy
 import cv2
 import cv2 as cv
 import numpy
+import numpy as np
 
 #to subscribe to and publish images
 from std_msgs.msg import String
@@ -18,6 +19,7 @@ from cv_bridge import CvBridge, CvBridgeError
 
 #for processing test. Delete when ROS communication works
 import pieceTracker as pt
+import pieceIdentify as pi
 
 """
 dependencies needed for manifest to run: 
@@ -54,7 +56,9 @@ class image_converter:
 
 	#parse out location RIO (the tredmill area)
     crop_image = cv_image[70:240,100:545]
-    crop_image = crop_image[70:110, 160:220]
+	
+	#for creating templates
+    #crop_image = crop_image[60:120, 150:230]
     
 	#converts image to numpy array and scales the 16bit for depth RIO
 	#values we are interested in are in the 12000 value range. scale to 250 before convert to 8bit to not lose info
@@ -65,11 +69,16 @@ class image_converter:
 	#extracts the areas that are taller than just under the height of the pieces
     whatisthis, thresh1 = cv2.threshold(crop_image, 110, 250, cv2.THRESH_BINARY_INV)
 
-    cv2.imwrite("templates/LTemplate.jpg", thresh1)
+    cv2.imwrite("templates/STemplate.jpg", thresh1)
 
     #Display image 
     cv.imshow("Image window", thresh1)
     cv.waitKey(3)
+
+    template = cv2.imread("templates/STemplate0Rotate.jpg",2)
+    #rotations = [90,180,270,360]
+    #pi.GenerateRotations(image, "S", rotations)
+    pi.CheckTemplate(thresh1, template)
 
 	#process for centroied. Displays image centroid. 
     #pt.readFrame(thresh1)
