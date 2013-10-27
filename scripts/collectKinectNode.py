@@ -54,6 +54,7 @@ class image_converter:
 
 	#parse out location RIO (the tredmill area)
     crop_image = cv_image[70:240,100:545]
+    crop_image = crop_image[70:110, 160:220]
     
 	#converts image to numpy array and scales the 16bit for depth RIO
 	#values we are interested in are in the 12000 value range. scale to 250 before convert to 8bit to not lose info
@@ -64,14 +65,14 @@ class image_converter:
 	#extracts the areas that are taller than just under the height of the pieces
     whatisthis, thresh1 = cv2.threshold(crop_image, 110, 250, cv2.THRESH_BINARY_INV)
 
-    print type(thresh1)
+    cv2.imwrite("templates/LTemplate.jpg", thresh1)
 
     #Display image 
     cv.imshow("Image window", thresh1)
     cv.waitKey(3)
 
 	#process for centroied. Displays image centroid. 
-    pt.readFrame(thresh1)
+    #pt.readFrame(thresh1)
 	
 	#publish image
     '''
