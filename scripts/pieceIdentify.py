@@ -1,43 +1,54 @@
 import cv2
 import numpy as np
+import os
 from matplotlib import pyplot as plt
 
-#def MatchPattern(tempL, tempS, tempT, tempZ, tempO, tempI, tempJ):
+#pdb
+#returns array of type and rotation of the pieces seen 
 
-def CheckTemplate(field, template):
-    #print template.type()
-    #print type(template)
-    template = np.asanyarray(template)
-    template = (template/2.**8).astype(np.uint8)
-    field = field.astype(np.uint8)
-    
-    res = cv2.matchTemplate(field, template,cv2.TM_CCORR)
-    threshold = 1
-    loc = np.where(res >= threshold)
-    print "loc"
-    print len(loc)
-    (w, h) = template.shape[0:2]
-    #for pnt in zip(*loc[0:2]):
-        #print pnt
-        #cv2.rectangle(field, pnt, (pnt[0] + w, pnt[1] + h), 2)
-    cv2.imwrite('res.png',field)
-	
-def GenerateRotations(image, shape, rotations):
-	for rotation in rotations:
-		filePath = "../templates/" + shape + "Template" + str(rotation) + "Rotate.jpg"
-		rotatedImage = RotateImage(image, rotation)
-		cv2.imwrite(filePath, rotatedImage)
-		
-def RotateImage(image, angle):
-    try:
-        image_center = tuple(np.array(image.shape[0:2])/2)
-        print tuple(np.array(image.shape[0:2])/2)
-        rot_mat = cv2.getRotationMatrix2D(image_center,angle,1.0)
-        result = cv2.warpAffine(image, rot_mat, image.shape[0:2])
-    except:
-		result = image
-    return result
+class DeterminePiece:
 
-#image = cv2.imread("../templates/STemplate.jpg")
-#rotations = [90,180,270,360]
-#GenerateRotations(image, "S", rotations)
+    templateImages = []
+    templatesNames = []
+
+    def __init__(self):
+        self.templatesNames = os.listdir("templates")
+        for template in self.templatesNames:
+            if (template != "Field.jpg"):
+                templateImage = cv2.imread("templates/%s" %template, 2)
+                #print type(templateImage)
+                self.templateImages.append(templateImage)
+
+    def DeterminePieces(self, field):
+        pieces = self.IterateThroughTemplates(field)
+        return pieces
+
+    def IterateThroughTemplates(self, field):
+        pieces = []
+        i = 1
+        for template in self.templateImages:
+            if (self.CheckTemplate(field,template) == True):
+                templateName = self.templatesNames[i]
+                template = templateName[0:-4]
+                pieceType = templateName[0]
+                angle = templateName[1::]
+                print "template"
+                print pieceType
+            i += 1
+        #return pieces
+
+    def CheckTemplate(self, field, template):
+        template = np.asanyarray(template).astype(np.uint8)
+        field = field.astype(np.uint8)
+        cv2.imshow("Template", template)
+        res = cv2.matchTemplate(field, template, cv2.TM_SQDIFF)
+        threshold =.11
+        minVal,maxVal,minLoc,maxLoc = cv2.minMaxLoc(res)
+
+        if (minVal/100000000 < threshold):
+            print minLoc
+            #print minVal/100000000
+            return True
+
+    #field = cv2.imread("templates/Field.jpg",2)
+    #IterateThroughTemplates(field)
