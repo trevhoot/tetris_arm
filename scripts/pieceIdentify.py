@@ -34,8 +34,7 @@ class DeterminePiece:
                 templateName = templateName[0:-4]
                 pieceType = templateName[0]
                 angle = templateName[1::]
-                pieceInfo = [matchLocation[0],matchLocation[1],int(angle)]
-                #print pieceType
+                pieceInfo = [matchLocation[0],matchLocation[1],int(angle), pieceType]
             if (len(pieceInfo) != 0):
                 pieces.append(pieceInfo)
             i += 1

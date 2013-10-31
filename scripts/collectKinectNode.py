@@ -42,8 +42,9 @@ class image_converter:
   def __init__(self):
     print "init"
 
-    #publishes the resulting image to a new topic
+    #initiates topics to publish piece state and type to
     self.pieceState_pub = rospy.Publisher("pieceState", PieceState)
+    self.pieceType_pub = rospy.Publisher("pieceType", String)
 
     #self.PieceIdentifier = pi.DeterminePiece()
 
@@ -90,8 +91,9 @@ class image_converter:
 
     pieceList = self.pieceIdentifier.DeterminePieces(thresh1)
     if (pieceList != []):  
-      x1, y1, theta = pieceList[0]
+      x1, y1, theta, pType = pieceList[0]
       self.pieceState_pub.publish((x1+templatex/2, y1+templatey/2, theta))
+      self.pieceType_pub.publish(pType)
     #self.pieceState_pub.publish(l[0])
 	 #process for centroied. Displays image centroid. 
    #pt.readFrame(thresh1)
