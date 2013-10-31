@@ -25,30 +25,34 @@ class DeterminePiece:
 
     def IterateThroughTemplates(self, field):
         pieces = []
-        i = 1
+        i = 0
         for template in self.templateImages:
-            if (self.CheckTemplate(field,template) == True):
+            pieceInfo = []
+            matchLocation = self.CheckTemplate(field,template)
+            if (matchLocation != None):
                 templateName = self.templatesNames[i]
-                template = templateName[0:-4]
+                templateName = templateName[0:-4]
                 pieceType = templateName[0]
                 angle = templateName[1::]
-                print "template"
-                print pieceType
+                pieceInfo = [matchLocation[0],matchLocation[1],int(angle)]
+                #print pieceType
+            if (len(pieceInfo) != 0):
+                pieces.append(pieceInfo)
             i += 1
+        if (len(pieces) == None): pieces = None
+        return pieces
         #return pieces
 
     def CheckTemplate(self, field, template):
         template = np.asanyarray(template).astype(np.uint8)
         field = field.astype(np.uint8)
-        cv2.imshow("Template", template)
         res = cv2.matchTemplate(field, template, cv2.TM_SQDIFF)
         threshold =.11
         minVal,maxVal,minLoc,maxLoc = cv2.minMaxLoc(res)
 
         if (minVal/100000000 < threshold):
-            print minLoc
-            #print minVal/100000000
-            return True
+            return minLoc
+        else: return None
 
     #field = cv2.imread("templates/Field.jpg",2)
     #IterateThroughTemplates(field)

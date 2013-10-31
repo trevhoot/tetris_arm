@@ -17,7 +17,7 @@ import numpy as np
 #to subscribe to and publish images
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
-#for converting ros image to cv image
+from tetris_arm.msg import PieceState
 from cv_bridge import CvBridge, CvBridgeError
 
 
@@ -43,7 +43,7 @@ class image_converter:
     print "init"
 
     #publishes the resulting image to a new topic
-    self.image_pub = rospy.Publisher("binaryPieces", Image, "16UC1")
+    self.pieceState_pub = rospy.Publisher("pieceState", PieceState)
 
     #self.PieceIdentifier = pi.DeterminePiece()
 
@@ -69,6 +69,8 @@ class image_converter:
 	
 	  #for creating templates
     #crop_image = crop_image[100:160, 250:330]
+    templatex=60
+    templatey =80
     
 	 #converts image to numpy array and scales the 16bit for depth RIO
 	 #values we are interested in are in the 12000 value range. scale to 250 before convert to 8bit to not lose info
@@ -83,20 +85,18 @@ class image_converter:
     #cv2.imwrite("templates/Field.jpg", thresh1)
 
     #Display image 
-    cv.imshow("Image Window", thresh1)
+    cv.imshow("Image window", thresh1)
     cv.waitKey(3)
 
-    print self.pieceIdentifier.DeterminePieces(thresh1)
+    pieceList = self.pieceIdentifier.DeterminePieces(thresh1)
+    if (pieceList != []):  
+      x1, y1, theta = pieceList[0]
+      self.pieceState_pub.publish((x1+templatex/2, y1+templatey/2, theta))
+    #self.pieceState_pub.publish(l[0])
 	 #process for centroied. Displays image centroid. 
-    #pt.readFrame(thresh1)
+   #pt.readFrame(thresh1)
 	
-	 #publish image
-    '''
-    try:
-      self.image_pub.publish(self.bridge.cv_to_imgmsg(cv_image))
-    except CvBridgeError, e:
-      print e
-    '''
+	 
 
 def main(args):
   ic = image_converter()
