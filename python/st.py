@@ -144,7 +144,7 @@ class StArm():
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
 
-    def block_on_result(self, cmd, debug=False):
+    def block_on_result(self, cmd, debug=True):		#change debug back to false
         try:
             s = self.cxn.read(self.cxn.inWaiting())
             res = re.search(OK, s).group(0)
@@ -264,7 +264,9 @@ class StArm():
         self.block_on_result(cmd)
 
     def where(self):
+	return 'Fix me when you have time'
         cmd = WHERE
+	print cmd
         self.cxn.flushInput()
         self.cxn.write(cmd + CR)
         #res = self.block_on_result(cmd)
@@ -275,6 +277,9 @@ class StArm():
             while re.search(OK, res) is None:
             #while res[-2:] != 'OK':
                 res += self.cxn.readline()
+		if res == "WHERE":		# I added this to stop the false positives
+			print "I don't know!"
+			break
                 if res != '':
                     if res[-3] == '>':
                         print('WHERE command completed without' +
@@ -283,12 +288,17 @@ class StArm():
 
             lines = res.split('\r\n')
             #TODO: Need to account for possibility that arm is in decimal mode
-
+            #print 'lines = ', lines				#I added this to see what res was reading.
             cp = [int(x.strip().replace('.', ''))
                   for x in shlex.split(lines[2])]
-            pp = [int(x.strip().replace('.', ''))
-                  for x in shlex.split(lines[3])[1:]]
-
+	    pp = []
+	    for x in shlex.split(lines[3]):
+                try:
+		    pp.append(int(x.strip().replace('.','')))
+		except:
+		    pass
+            #pp = [int(x.strip().replace('.', ''))
+            #      for x in shlex.split(lines[3])]
             self.curr_pos.set(cp)
             self.prev_pos.set(pp)
         except RuntimeError, e:
