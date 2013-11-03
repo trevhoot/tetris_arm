@@ -46,7 +46,7 @@ class DeterminePiece:
         template = np.asanyarray(template).astype(np.uint8)
         field = field.astype(np.uint8)
         res = cv2.matchTemplate(field, template, cv2.TM_SQDIFF)
-        threshold =.11
+        threshold =.2
         minVal,maxVal,minLoc,maxLoc = cv2.minMaxLoc(res)
 
         if (minVal/100000000 < threshold):

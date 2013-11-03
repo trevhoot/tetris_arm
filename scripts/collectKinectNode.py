@@ -75,13 +75,16 @@ class image_converter:
     
 	 #converts image to numpy array and scales the 16bit for depth RIO
 	 #values we are interested in are in the 12000 value range. scale to 250 before convert to 8bit to not lose info
-    crop_image = (numpy.asanyarray(crop_image) -1000) *400
-	 #converts 16mono to 8mono to be threshold processed
+    crop_image = (numpy.asanyarray(crop_image) -1213) *100
+   
+	  #converts 16mono to 8mono to be threshold processed
     crop_image = (crop_image/2.**8).astype(numpy.uint8)
 
-	 #extracts the areas that are taller than just under the height of the pieces
-    whatisthis, thresh1 = cv2.threshold(crop_image, 110, 250, cv2.THRESH_BINARY_INV)
+    #crop_image = (crop_image).astype(numpy.uint8)
 
+	  #extracts the areas that are taller than just under the height of the pieces
+    whatisthis, thresh1 = cv2.threshold(crop_image, 240, 250, cv2.THRESH_BINARY)
+    print thresh1[0]
     #for creating template
     #cv2.imwrite("templates/Field.jpg", thresh1)
 
@@ -93,12 +96,7 @@ class image_converter:
     if (pieceList != []):  
       x1, y1, theta, pType = pieceList[0]
       self.pieceState_pub.publish((x1+templatex/2, y1+templatey/2, theta))
-      self.pieceType_pub.publish(pType)
-    #self.pieceState_pub.publish(l[0])
-	 #process for centroied. Displays image centroid. 
-   #pt.readFrame(thresh1)
-	
-	 
+      self.pieceType_pub.publish(pType)	
 
 def main(args):
   ic = image_converter()
