@@ -1,0 +1,3 @@
+<launch>
+  <node name="collectKinectNode" pkg="tetris_arm" type="collectKinectNode.py" />
+</launch>

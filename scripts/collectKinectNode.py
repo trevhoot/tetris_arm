@@ -66,7 +66,8 @@ class image_converter:
       print e
 
 	 #parse out location RIO (the tredmill area)
-    crop_image = cv_image[70:240,100:545]
+    ##crop_image = cv_image[70:240,100:545]
+    crop_image = cv_image[60:240,276:565]
 	
 	  #for creating templates
     #crop_image = crop_image[100:160, 250:330]
@@ -75,7 +76,7 @@ class image_converter:
     
 	 #converts image to numpy array and scales the 16bit for depth RIO
 	 #values we are interested in are in the 12000 value range. scale to 250 before convert to 8bit to not lose info
-    crop_image = (numpy.asanyarray(crop_image) -1213) *100
+    crop_image = (numpy.asanyarray(crop_image) -1220) *100
    
 	  #converts 16mono to 8mono to be threshold processed
     crop_image = (crop_image/2.**8).astype(numpy.uint8)
@@ -84,7 +85,7 @@ class image_converter:
 
 	  #extracts the areas that are taller than just under the height of the pieces
     whatisthis, thresh1 = cv2.threshold(crop_image, 240, 250, cv2.THRESH_BINARY)
-    print thresh1[0]
+    
     #for creating template
     #cv2.imwrite("templates/Field.jpg", thresh1)
 

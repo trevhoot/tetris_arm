@@ -12,7 +12,7 @@ class DeterminePiece:
     templatesNames = []
 
     def __init__(self):
-        self.templatesNames = os.listdir("templates")
+        self.templatesNames = os.listdir("/home/victoria/catkin_ws/src/tetris_arm/templates")
         for template in self.templatesNames:
             if (template != "Field.jpg"):
                 templateImage = cv2.imread("templates/%s" %template, 2)
