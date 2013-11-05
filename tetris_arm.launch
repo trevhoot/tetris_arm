@@ -1,9 +1,14 @@
 <launch>
+	#to identify pieces using kinnect info
 	<node name="collectKinectPublisher" pkg="tetris_arm" type="collectKinectPublisher.py" />
-	<node name="identifyL" pkg="tetris_arm" type="identifyL.py" />
-	<node name="identifyO" pkg="tetris_arm" type="identifyO.py" />
-	<node name="identifyJ" pkg="tetris_arm" type="identifyJ.py" />
-	<node name="identifyT" pkg="tetris_arm" type="identifyT.py" />
-	<node name="identifyS" pkg="tetris_arm" type="identifyS.py" />
-	<node name="identifyZ" pkg="tetris_arm" type="identifyZ.py" />
+	<node name="identifyL" pkg="tetris_arm" type="identifyL.py"  cwd="node" />
+	<node name="identifyO" pkg="tetris_arm" type="identifyO.py"  cwd="node"/>
+	<node name="identifyJ" pkg="tetris_arm" type="identifyJ.py"  cwd="node" />
+	<node name="identifyT" pkg="tetris_arm" type="identifyT.py"  cwd="node" />
+	<node name="identifyS" pkg="tetris_arm" type="identifyS.py"  cwd="node" />
+	<node name="identifyZ" pkg="tetris_arm" type="identifyZ.py"  cwd="node" />
+
+	<node name="lowlevel" pkg="tetris_arm" type="lowlevel.py"  cwd="node" />
+	<node name="midlevel" pkg="tetris_arm" type="midlevel.py"  cwd="node" />
+	<node name="highlevel" pkg="tetris_arm" type="highlevel.py"  cwd="node" />
 </launch>

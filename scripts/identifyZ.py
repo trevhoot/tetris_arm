@@ -23,12 +23,13 @@ class DeterminePieceZ:
 
         rospy.init_node('identify_Z', anonymous=True)
 
-        self.templatesNames = os.listdir("/home/victoria/catkin_ws/src/tetris_arm/templates")
+        self.templatesNames = os.listdir("../templates")
         for template in self.templatesNames:
             if (template != "Field.jpg" and template[0] == "Z"):
                 templateImage = cv2.imread("/home/victoria/catkin_ws/src/tetris_arm/templates/%s" %template, 2)
                 self.templateImages.append(templateImage)
 
+        #intiates publishers for piece information
         self.pieceState_pub = rospy.Publisher("pieceState", PieceState)
         self.pieceType_pub = rospy.Publisher("pieceType", String)
 

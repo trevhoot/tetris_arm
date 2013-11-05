@@ -17,18 +17,21 @@ class DeterminePieceT:
     templateImages = []
     templatesNames = []
     templatex=60
-    templatey =8
+    templatey=8
 
     def __init__(self):
 
         rospy.init_node('identify_S', anonymous=True)
 
-        self.templatesNames = os.listdir("/home/victoria/catkin_ws/src/tetris_arm/templates")
+        # this should not be an absolute path, I'm sorry. 
+        self.templatesNames = os.listdir("../templates")
+        #reades and locally stores all the templates to limit processing for every iteration
         for template in self.templatesNames:
             if (template != "Field.jpg" and template[0] == "T"):
                 templateImage = cv2.imread("/home/victoria/catkin_ws/src/tetris_arm/templates/%s" %template, 2)
                 self.templateImages.append(templateImage)
 
+        #intiates publishers for piece information
         self.pieceState_pub = rospy.Publisher("pieceState", PieceState)
         self.pieceType_pub = rospy.Publisher("pieceType", String)
 
