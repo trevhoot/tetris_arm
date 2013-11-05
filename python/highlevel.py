@@ -15,8 +15,8 @@ class Board():
 		self.profile = [0,0,0,1,2,1,0,0,0,0]
 
 		# Set up talkers and listeners
-		self.placeCmdPub = rospy.Publisher("putHere", UInt16)			# send index and orientation to mid level
-		self.newPieceSub = rospy.Subscriber("newPiece", String, newPieceCB)	# a New piece has entered the field
+		self.placeCmdPub = rospy.Publisher("putHere", UInt16)				# send index and orientation to mid level
+		self.newPieceSub = rospy.Subscriber("newPiece", String, self.newPieceCB)	# a New piece has entered the field
 
 	def __repr__(self):
 		out = ''
@@ -107,7 +107,7 @@ class Board():
 			piece = J()
 		if letter == 'O':
 			piece = O()
-		if letter == 'T:
+		if letter == 'T':
 			piece = T()
 		if letter == 'S':
 			piece = S()
@@ -116,6 +116,7 @@ class Board():
 		self.currPiece = piece
 
 	def newPieceCB(self, data):
+		print 'called!', data.data
 		piece = data.data
 		self.newPiece(data)
 		orientation, index = self.choosePlace()

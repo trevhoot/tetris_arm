@@ -6,10 +6,12 @@ import midlevel as mid
 from random import randint
 
 
-
 b = bt.Board()
 arm = low.ArmWrapper()		# change ArmWrapper methods to lowlevel functions, initialize arm from here.
 
+
+
+'''
 while 1:
     						# get image				(low level)
     CoM, corners = pt.readFrame(frame)		# find center of mass, corners		(mid level processing)
@@ -26,3 +28,4 @@ while 1:
 
 						# Wait for 'finished'			(low level)
     arm.goXY(index, 4600)   #make height vary	# Put it down				(low level)
+'''
