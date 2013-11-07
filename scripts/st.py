@@ -34,6 +34,8 @@ QUERY = ' ?'
 IMPERATIVE = ' !'
 TELL = 'TELL'
 MOVE = 'MOVE'
+ALIGN = 'ALIGN'
+NONALIGN = 'NONALIGN'
 
 OK = 'OK'
 
@@ -308,3 +310,13 @@ class StArm():
             self.prev_pos.set([0, 0, 0, 0, 0])
 
         return (self.curr_pos, self.prev_pos)
+    
+    def lock_gripper_angle(self,TF = True):
+        if TF:
+            cmd = ALIGN
+        else:
+            cmd = NONALIGN
+        print 'Locking gripper orientation...'
+        self.cxn.flushInput()
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
