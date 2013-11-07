@@ -8,7 +8,7 @@ import rospy
 
 #to subscribe to and publish images
 from std_msgs.msg import String, Bool, UInt16
-from tetris_arm.msg import TetArmArray, PieceState
+from tetris_arm.msg import TetArmArray, PieceState, DownCommand
 
 i, l, j, o, z, s, t = 'I', 'L', 'J', 'O', 'Z', 'S', 'T'
 
@@ -72,16 +72,19 @@ class MidLevel():
 		# Set up talkers and listeners
 		self.pieceInfoSub = rospy.Subscriber("pieceInfo", PieceState, self.setPiece)	# piece data from camera wrapper
 		self.pieceTypeSub = rospy.Subscriber("pieceType", String, self.pieceType)	# piece type from camera wrapper
-		self.placeCmdSub = rospy.Subscriber("putHere", UInt16, self.placePiece)		# get index and orientation command from highLevel
+		self.placeCmdSub = rospy.Subscriber("putHere", DownCommand, self.placePiece)		# get index and orientation command from highLevel
 		self.armPub = rospy.Publisher("armCommand", TetArmArray)			# x,y,orientation,size
 		self.downPub = rospy.Publisher("downCmd", UInt16)				# drop to pick up piece of a certain size
 		self.newPiecePub = rospy.Publisher("newPiece", String)				# announce newPiece to highLevel
+
+		self.printout = rospy.Publisher('print', String)
 	
 		dummyPiece = Piece()
 		self.piece = dummyPiece
 
 	def setPiece(self, data):
 		print 'setting piece data'
+		self.printout.publish('setting piece data to %s' %str(data.data))
 		pix_x, pix_y, th = data.data
 		x, y = self.pixtopos(pix_x, pix_y)
 		self.piece.set_xyth(x, y, th)
@@ -92,14 +95,16 @@ class MidLevel():
 		print 'letter is', letter
 		if letter != self.piece.letter:			#new piece --OR WATCH FOR FALSE POSITIVES!
 			print "NEW LETTER!"
-			self.newPiecePub.publish(String(letter))
+			self.printout.publish('NEW LETTER')
 			self.piece = Piece(letter)
 			self.pickPiece()
+			self.newPiecePub.publish(String(letter))
 		
 	def placePiece(self, data):
 		index, orientation = data.data
 		print 'command from high level:', index, orientation
 		x = int(index*300.-1400)  #maps [0 to 10] to [-1400 to 1600]
+		self.printout.publish('go to %d (%d), %d' %(index, x, orientation))
 		self.armPub.publish((x,6000,orientation,self.piece.size))
 		self.downPub.publish(2)
 		self.goHome()
@@ -114,7 +119,7 @@ class MidLevel():
 			self.downPub.publish(self.piece.size)
 
 	def goHome(self):
-		self.armPub.publish(3000,3000,0,2)
+		self.armPub.publish((3000,3000,0,2))
 
 	def pixtopos(self, pix_x, pix_y):
 		# Board cropped to 70:240,100:545 in collectKinectNode.py
@@ -146,51 +151,3 @@ def main(args):
 if __name__ == '__main__':
     main(sys.argv)
 
-
-
-
-'''
-def whatPiece(corners):
-    xy = zip(*corners)
-    xs = xy[0]
-    ys = xy[1]
-    xmin = min(xs)
-    xmax = max(xs)
-    ymin = min(ys)
-    ymax = max(ys)
-    width = xmax - xmin
-    height = ymax - ymin
-
-    # Scale the pieces to combinations of four unit squares. (Blocks must be pretty much orthogonal)
-    scalefactor = 15
-    slop = 5
-    corners = [( (x - xmin+slop)/scalefactor, (y - ymin + 5)/scalefactor) for x, y in corners]
-    corners.sort()
-
-    			# Do so many unit tests on these oh my gawd
-			# Make this output orientation (from basicTetris)
-    if len(corners) == 4:	#I or O
-        if corners == [(0,0),(0,1),(4,0),(4,1)] or [(0,0),(0,4),(1,0),(1,4)]:
-            piece = 'i'
-        if corners == [(0,0),(0,2),(2,0),(2,2)]:
-            piece = 'o'
-
-    if len(corners) == 6:	#L or J
-        if corners == [(0,0),(0,3),(1,0),(1,2),(2,2),(2,3)] or [(0,1),(0,2),(2,0),(2,1),(3,0),(3,2)] or [(0,0),(0,1),(1,1),(1,3),(2,0),(2,3)] or [(0,0),(0,2),(1,1),(1,2),(3,0),(3,1)]:
-            piece = 'l'
-        if corners == [(0,2),(0,3),(1,0),(1,2),(2,0),(2,3)] or [(0,0),(0,1),(2,1),(2,2),(3,0),(3,2)] or [(0,0),(0,3),(1,1),(1,3),(2,0),(2,1)] or [(0,0),(0,2),(1,0),(1,1),(3,1),(3,2)]:
-            piece = 'j'
-
-    if len(corners) >= 8:	#T, S or Z
-        if corners == [(0,0),(0,1),(1,1),(1,2),(2,0),(2,1),(3,1),(3,2)] or [(0,1),(0,3),(1,0),(1,1),(1,2),(1,3),(2,0),(2,2)]:
-            piece = 'z'
-        if corners == [(0,1),(0,2),(1,0),(1,1),(2,1),(2,2),(3,0),(3,1)] or [(0,0),(0,2),(1,0),(1,1),(1,2),(1,3),(2,1),(2,3)]:
-            piece = 's'
-
-    return piece, 0
-'''
-
-
-
-
-	

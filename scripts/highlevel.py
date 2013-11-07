@@ -9,6 +9,7 @@ import rospy
 
 #to subscribe to and publish images
 from std_msgs.msg import String, UInt16
+from tetris_arm.msg import DownCommand
 
 
 class Board():
@@ -17,8 +18,10 @@ class Board():
 		self.profile = [0,0,0,1,2,1,0,0,0,0]
 
 		# Set up talkers and listeners
-		self.placeCmdPub = rospy.Publisher("putHere", UInt16)				# send index and orientation to mid level
+		self.placeCmdPub = rospy.Publisher("putHere", DownCommand)				# send index and orientation to mid level
 		self.newPieceSub = rospy.Subscriber("newPiece", String, self.newPieceCB)	# a New piece has entered the field
+
+		self.printout = rospy.Publisher('print', String)
 
 	def __repr__(self):
 		out = ''
@@ -95,12 +98,12 @@ class Board():
 		lowest = self.tryPiece()
 		orientation, index = choice(lowest)
 		self.landPiece(orientation, index)
-                return orientation, index
+		return orientation, index
 
 	def newPiece(self, letter = 0):
-                if letter == 0:
-		    letter = choice(['I', 'L', 'J', 'O', 'T', 'S', 'Z'])
-                    print letter
+		if letter == 0:
+			letter = choice(['I', 'L', 'J', 'O', 'T', 'S', 'Z'])
+			print letter
 		if letter == 'I':
 			piece = I()
 		if letter == 'L':
@@ -120,9 +123,9 @@ class Board():
 	def newPieceCB(self, data):
 		print 'called!', data.data
 		piece = data.data
-		self.newPiece(data)
+		self.newPiece(data.data)
 		orientation, index = self.choosePlace()
-		self.placeCMD.publish((orientation, index))
+		self.placeCmdPub.publish((orientation, index))
 
 
 class Piece():
@@ -211,7 +214,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+	main(sys.argv)
 
 '''
 orientation = 0

@@ -30,6 +30,7 @@ add_message_files(
    TetArmArray.msg
    ProcessedImage.msg
    PieceState.msg
+   DownCommand.msg
  )
 
 ## Generate services in the 'srv' folder
