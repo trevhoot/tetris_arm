@@ -54,8 +54,6 @@ class image_converter:
 	 #subscibes to depth image from kinnect and passes it to callback fn.
     self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image,self.callback) 
 
-    self.imagesub = rospy.Subscriber("camera/depth/image_raw",Image,self.callback)
-
     rospy.spin()
 
   def callback(self,data):
@@ -86,7 +84,8 @@ class image_converter:
     whatisthis, thresh1 = cv2.threshold(crop_image, 240, 250, cv2.THRESH_BINARY)
 
     #Display image 
-    cv2.imshow("Image window", thresh1)
+    #cv2.imshow("Image window", thresh1)
+    
     #self.bridge.cv_to_imgmsg(thresh1)
     msg = cv.fromarray(thresh1)
     msg = self.bridge.cv_to_imgmsg(msg)
