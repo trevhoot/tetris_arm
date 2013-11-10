@@ -115,12 +115,12 @@
   
 	#to identify pieces using kinnect info
 	<node name="collectKinectPublisher" pkg="tetris_arm" type="collectKinectPublisher.py" />
-	<node name="identifyL" pkg="tetris_arm" type="identifyL.py"  cwd="node" />
-	<node name="identifyO" pkg="tetris_arm" type="identifyO.py"  cwd="node"/>
-	<node name="identifyJ" pkg="tetris_arm" type="identifyJ.py"  cwd="node" />
-	<node name="identifyT" pkg="tetris_arm" type="identifyT.py"  cwd="node" />
-	<node name="identifyS" pkg="tetris_arm" type="identifyS.py"  cwd="node" />
-	<node name="identifyZ" pkg="tetris_arm" type="identifyZ.py"  cwd="node" />
+	<node name="identifyL" pkg="tetris_arm" type="identify.py"  cwd="node" args="L"/>
+	<node name="identifyO" pkg="tetris_arm" type="identify.py"  cwd="node" args="O"/>
+	<node name="identifyJ" pkg="tetris_arm" type="identify.py"  cwd="node" args="J"/>
+	<node name="identifyT" pkg="tetris_arm" type="identify.py"  cwd="node" args="T"/>
+	<node name="identifyS" pkg="tetris_arm" type="identify.py"  cwd="node" args="S"/>
+	<node name="identifyZ" pkg="tetris_arm" type="identify.py"  cwd="node" args="Z"/>
 
 	<node name="lowlevel" pkg="tetris_arm" type="lowlevel.py"  cwd="node" />
 	<node name="midlevel" pkg="tetris_arm" type="midlevel.py"  cwd="node" />
