@@ -38,7 +38,8 @@ class ArmWrapper():
 		self.y = 6000
 		self.arm.cartesian()
 		self.arm.move_to(100, 6000, 0)
-		self.arm.rotate_hand(1750)		# why is this not happening?!
+		self.arm.rotate_hand(1750)
+		self.arm.cartesian()
 		#self.go_home()
 
 		# Set up talkers and listeners
@@ -52,15 +53,18 @@ class ArmWrapper():
 		if type(data) != tuple:
 			data = data.data
 		self.x, self.y, th, size = data
-		z = 0					#Why is z here 0?
+		z = 0
 		self.printOut.publish("lowlevel going to x y th size %f %f %f %f" %(self.x, self.y, th, size))
+		if self.y < 2700:
+			self.y = 2700
+		if self.y > 7000:
+			self.y = 7000
 		self.arm.move_to(self.x,self.y,z)
 		self.rotate_gripper(th)
-		self.arm.cartesian()
 
 	def down (self, size):
 		self.size = size
-		z = 0			#should be overwritten. why isn't it?
+		z = 0			
 		#height to drop by depends on size of gripper
 		if self.size == 2:	#should not be sending down command if you aren't going to close
 			z = -300

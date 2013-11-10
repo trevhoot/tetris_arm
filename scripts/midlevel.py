@@ -83,6 +83,7 @@ class MidLevel():
 		self.newPiecePub = rospy.Publisher("newPiece", String)				# announce newPiece to highLevel
 
 		self.printout = rospy.Publisher('print', String)
+		self.calibratePub = rospy.Publisher('calibrate' String)
 	
 		dummyPiece = Piece()
 		self.piece = dummyPiece
@@ -93,7 +94,7 @@ class MidLevel():
 		pix_x, pix_y, th = data.data
 		x, y = self.pixtopos(pix_x, pix_y)
 		self.piece.set_xyth(x, y, th)
-		self.printout.publish('midlevel: set piece data to %s' %str(self.piece.info()))
+		self.calibtratePub.publish('midlevel: set piece data to %s' %str(self.piece.info()))
 
 
 	def pieceType(self, data):
@@ -143,6 +144,7 @@ class MidLevel():
 
 		y = (pix_x - pix_minx) * pixtoticks + pos_miny
 		x = (pix_y - pix_miny) * pixtoticks + pos_minx
+		self.calibratePub.publish('pix: (%f, %f) to pos (%f, %f)' %(pix_x, pix_y, x, y))
 		return x, y
 
 def main(args):
