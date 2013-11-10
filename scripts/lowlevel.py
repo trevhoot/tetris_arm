@@ -44,6 +44,7 @@ class ArmWrapper():
 		# Set up talkers and listeners
 		self.pieceSub = rospy.Subscriber("armCommand", TetArmArray, self.goXYTH)
 		self.downSub = rospy.Subscriber("downCmd", UInt16, self.down)
+		self.printOut = rospy.Publisher("print", String)
 		print 'set up pubsubs'
 
 
@@ -52,6 +53,7 @@ class ArmWrapper():
 			data = data.data
 		self.x, self.y, th, size = data
 		z = 0					#Why is z here 0?
+		self.printOut.publish("lowlevel going to x y th size %f %f %f %f" %(self.x, self.y, th, size))
 		self.arm.move_to(self.x,self.y,z)
 		self.rotate_gripper(th)
 		self.arm.cartesian()
@@ -78,9 +80,9 @@ class ArmWrapper():
 
 	def rotate_gripper(self, orientation):
 		if orientation == 1:		# vertical
-			self.arm.rotate_wrist(700)
-		if orientation == 0:		# horizontal700
-			self.arm.rotate_wrist(-2300)
+			self.arm.rotate_wrist(300)
+		if orientation == 0:		# horizontal
+			self.arm.rotate_wrist(100)
 		self.arm.cartesian()
 
 	def go_home(self):

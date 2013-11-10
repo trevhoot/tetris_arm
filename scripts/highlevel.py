@@ -21,7 +21,7 @@ class Board():
 		self.placeCmdPub = rospy.Publisher("putHere", DownCommand)				# send index and orientation to mid level
 		self.newPieceSub = rospy.Subscriber("newPiece", String, self.newPieceCB)	# a New piece has entered the field
 
-		self.printout = rospy.Publisher('print', String)
+		self.printOut = rospy.Publisher('print', String)
 
 	def __repr__(self):
 		out = ''
@@ -123,6 +123,7 @@ class Board():
 	def newPieceCB(self, data):
 		print 'called!', data.data
 		piece = data.data
+		self.printOut.publish("highlevel: got a new piece: %s" %piece)
 		self.newPiece(data.data)
 		orientation, index = self.choosePlace()
 		self.placeCmdPub.publish((orientation, index))

@@ -33,6 +33,7 @@ class DeterminePiece:
         self.pieceStatePub = rospy.Publisher("pieceState", PieceState)
         self.pieceTypePub = rospy.Publisher("pieceType", String)
         self.talker = rospy.Publisher("chatter", String)
+        self.printOut = rospy.Publisher("print", String)
 
         self.bridge = CvBridge()
 
@@ -49,6 +50,7 @@ class DeterminePiece:
 
         if (pieceList != []):  
             x1, y1, theta, pType = pieceList[0]
+            #self.printOut.publish("lowlevel: there's a piece at %s" %str(pieceList[0]))
             self.pieceStatePub.publish((x1+self.templatex/2, y1+self.templatey/2, theta))
             self.pieceTypePub.publish(self.letter) 
 
@@ -68,7 +70,7 @@ class DeterminePiece:
                 if (len(pieceInfo) != 0):
                     pieces.append(pieceInfo)
                 i += 1
-        if (len(pieces) == None): pieces = None
+        if (len(pieces) == None): pieces = []
         return pieces
 
     def CheckTemplate(self, field, template):

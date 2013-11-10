@@ -16,14 +16,19 @@ class Piece():
 	def __init__(self, letter = 'X'):
 		self.letter = letter
 		self.x = 0
-		self.y = 0
+		self.y = 6000
 		self.orientation = 0
 		if letter in [i, l, j]:
-			self.size = 1
+			self.size = 0
 		if letter in [o, z, s, t]:
 			self.size = 1
+		if letter == 'X':
+			self.size = 2 		#This is a placeholder and it is bad.
 
 		self.jl_offset = 10		#how much is the com offset by?
+
+	def __repr__(self):
+		return self.letter
 
 
 	def set_xyth(self, x, y, th):
@@ -70,7 +75,7 @@ class MidLevel():
 	def __init__(self):
 		
 		# Set up talkers and listeners
-		self.pieceInfoSub = rospy.Subscriber("pieceInfo", PieceState, self.setPiece)	# piece data from camera wrapper
+		self.pieceInfoSub = rospy.Subscriber("pieceState", PieceState, self.setPiece)	# piece data from camera wrapper
 		self.pieceTypeSub = rospy.Subscriber("pieceType", String, self.pieceType)	# piece type from camera wrapper
 		self.placeCmdSub = rospy.Subscriber("putHere", DownCommand, self.placePiece)		# get index and orientation command from highLevel
 		self.armPub = rospy.Publisher("armCommand", TetArmArray)			# x,y,orientation,size
@@ -83,11 +88,12 @@ class MidLevel():
 		self.piece = dummyPiece
 
 	def setPiece(self, data):
+		#self.printout.publish('midlevel: piece is %s' %self.piece)
 		print 'setting piece data'
-		self.printout.publish('setting piece data to %s' %str(data.data))
 		pix_x, pix_y, th = data.data
 		x, y = self.pixtopos(pix_x, pix_y)
 		self.piece.set_xyth(x, y, th)
+		self.printout.publish('midlevel: set piece data to %s' %str(self.piece.info()))
 
 
 	def pieceType(self, data):
@@ -95,7 +101,7 @@ class MidLevel():
 		print 'letter is', letter
 		if letter != self.piece.letter:			#new piece --OR WATCH FOR FALSE POSITIVES!
 			print "NEW LETTER!"
-			self.printout.publish('NEW LETTER')
+			self.printout.publish('midlevel: NEW LETTER')
 			self.piece = Piece(letter)
 			self.pickPiece()
 			self.newPiecePub.publish(String(letter))
@@ -104,7 +110,7 @@ class MidLevel():
 		index, orientation = data.data
 		print 'command from high level:', index, orientation
 		x = int(index*300.-1400)  #maps [0 to 10] to [-1400 to 1600]
-		self.printout.publish('go to %d (%d), %d' %(index, x, orientation))
+		self.printout.publish('midlevel: go to %d (%d), %d' %(index, x, orientation))
 		self.armPub.publish((x,6000,orientation,self.piece.size))
 		self.downPub.publish(2)
 		self.goHome()
@@ -124,17 +130,19 @@ class MidLevel():
 	def pixtopos(self, pix_x, pix_y):
 		# Board cropped to 70:240,100:545 in collectKinectNode.py
 		pix_minx = 0	# Define the limits of the picture
-		pix_maxx = 445
+		pix_maxx = 289
 		pix_miny = 0
-		pix_maxy = 170
+		pix_maxy = 180
 
-		pos_minx = -2000	# Corresponding arm positions
-		pos_maxx = 2000
-		pos_miny = 2700
-		pos_maxy = 7500
+		pos_minx = -1000	# Corresponding arm positions
+		pos_maxx = 1000
+		pos_miny = 6000
+		pos_maxy = 12000
 
-		y = (pix_x - pix_minx) / (pix_maxx - pix_minx) * (pos_maxy - pos_miny) + pos_miny
-		x = (pix_y - pix_miny) / (pix_maxy - pix_miny) * (pos_maxx - pos_minx) + pos_minx
+		pixtoticks = (pos_maxx - pos_minx) / (pix_maxy - pix_miny)
+
+		y = (pix_x - pix_minx) * pixtoticks + pos_miny
+		x = (pix_y - pix_miny) * pixtoticks + pos_minx
 		return x, y
 
 def main(args):
