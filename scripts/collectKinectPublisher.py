@@ -39,9 +39,6 @@ class image_converter:
   def __init__(self):
     print "init"
 
-    rospy.init_node('listener', anonymous=True)
-
-
     #initiates topics to publish piece state and type to
 
     self.processedImage_pub = rospy.Publisher("processedImage", Image)
@@ -92,8 +89,8 @@ class image_converter:
       self.processedImage_pub.publish(msg)
 
 def main(args):
-  ic = image_converter()
   rospy.init_node('image_converter', anonymous=True)
+  ic = image_converter()
   try:
     rospy.spin()
   except KeyboardInterrupt:

@@ -74,7 +74,6 @@ class DeterminePiece:
         return pieces
 
     def CheckTemplate(self, field, template):
-	self.talker.publish(str(template))
         template = np.asanyarray(template).astype(np.uint8)
         field = field.astype(np.uint8)
         res = cv2.matchTemplate(field, template, cv2.TM_SQDIFF)

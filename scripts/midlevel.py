@@ -83,7 +83,7 @@ class MidLevel():
 		self.newPiecePub = rospy.Publisher("newPiece", String)				# announce newPiece to highLevel
 
 		self.printout = rospy.Publisher('print', String)
-		self.calibratePub = rospy.Publisher('calibrate' String)
+		self.calibratePub = rospy.Publisher('calibrate', String)
 	
 		dummyPiece = Piece()
 		self.piece = dummyPiece
@@ -108,8 +108,8 @@ class MidLevel():
 			self.newPiecePub.publish(String(letter))
 		
 	def placePiece(self, data):
-		index, orientation = data.data
-		print 'command from high level:', index, orientation
+		orientation, index = data.data
+		print 'command from high level:', orientation, index
 		x = int(index*300.-1400)  #maps [0 to 10] to [-1400 to 1600]
 		self.printout.publish('midlevel: go to %d (%d), %d' %(index, x, orientation))
 		self.armPub.publish((x,6000,orientation,self.piece.size))
