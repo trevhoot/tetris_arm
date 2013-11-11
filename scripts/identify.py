@@ -24,6 +24,7 @@ class DeterminePiece:
 	self.letter = letter
         rospy.init_node('identify_%s' %self.letter, anonymous=True)
 
+	self.templateImages = []	
         self.templatesNames = os.listdir("../templates")
         for template in self.templatesNames:
             if (template != "Field.jpg" and template[0] == self.letter):
@@ -36,9 +37,7 @@ class DeterminePiece:
         self.printOut = rospy.Publisher("print", String)
 
         self.bridge = CvBridge()
-
-        self.image_sub = rospy.Subscriber("processedImage",Image,self.callback)
-        rospy.spin()
+	self.image_sub = rospy.Subscriber("processedImage", Image, self.callback)
 
 
     def callback(self,data):
@@ -74,6 +73,7 @@ class DeterminePiece:
         return pieces
 
     def CheckTemplate(self, field, template):
+	self.printOut.publish(str(template))
         template = np.asanyarray(template).astype(np.uint8)
         field = field.astype(np.uint8)
         res = cv2.matchTemplate(field, template, cv2.TM_SQDIFF)
@@ -90,3 +90,5 @@ class DeterminePiece:
 if __name__ == '__main__':
     letter = sys.argv[1]
     ic = DeterminePiece(letter)
+    rospy.spin()
+
