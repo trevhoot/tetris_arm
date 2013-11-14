@@ -6,7 +6,7 @@ import shlex
 DEFAULT_DEV = '/dev/tty.KeySerial1'
 
 # Use this one for PC
-DEFAULT_DEV = 'COM7'
+DEFAULT_DEV = '/dev/ttyUSB0'
 DEFAULT_BAUD_RATE = 19200
 DEFAULT_TIMEOUT = 0.05
 
@@ -146,7 +146,7 @@ class StArm():
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
 
-    def block_on_result(self, cmd, debug=True):		#change debug back to false
+    def block_on_result(self, cmd, debug=False):		
         try:
             s = self.cxn.read(self.cxn.inWaiting())
             res = re.search(OK, s).group(0)
@@ -154,7 +154,8 @@ class StArm():
             res = ''
 
         while res != OK:
-            s += self.cxn.read(self.cxn.inWaiting())
+	    chars = self.cxn.inWaiting()
+            s += self.cxn.read(chars)
             try:
                 res = re.search('>', s).group(0)
                 if res == '>':
@@ -311,7 +312,7 @@ class StArm():
 
         return (self.curr_pos, self.prev_pos)
     
-    def lock_gripper_angle(self,TF = True):
+    def lock_wrist_angle(self,TF = True):
         if TF:
             cmd = ALIGN
         else:

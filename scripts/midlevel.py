@@ -76,38 +76,38 @@ class MidLevel():
 		
 		# Set up talkers and listeners
 		self.pieceInfoSub = rospy.Subscriber("pieceState", PieceState, self.setPiece)	# piece data from camera wrapper
-		self.pieceTypeSub = rospy.Subscriber("pieceType", String, self.pieceType)	# piece type from camera wrapper
-		self.placeCmdSub = rospy.Subscriber("putHere", DownCommand, self.placePiece)		# get index and orientation command from highLevel
+		#self.pieceTypeSub = rospy.Subscriber("pieceType", String, self.pieceType)	# piece type from camera wrapper
+		#self.placeCmdSub = rospy.Subscriber("putHere", DownCommand, self.placePiece)		# get index and orientation command from highLevel
 		self.armPub = rospy.Publisher("armCommand", TetArmArray)			# x,y,orientation,size
 		self.downPub = rospy.Publisher("downCmd", UInt16)				# drop to pick up piece of a certain size
 		self.newPiecePub = rospy.Publisher("newPiece", String)				# announce newPiece to highLevel
 
 		self.printout = rospy.Publisher('print', String)
 		self.calibratePub = rospy.Publisher('calibrate', String)
-		self.calibrateSub = rospy.Subscriber('calibration', String, self.setCalibration)
 	
 		dummyPiece = Piece()
 		self.piece = dummyPiece
 
-		self.pos_minx = -1000	# Corresponding arm positions
-		self.pos_maxx = 1000
-		self.pos_miny = 6000
-		self.pos_maxy = 12000
+		self.pos_minx = -1600	# Corresponding arm positions
+		self.pos_maxx = 1800
+		self.pos_miny = 5700		#maxy ~ 11500
 
-	def setCalibration(self,data):
-		s = data.data
-		self.pos_minx, self.pos_maxx, self.pos_miny, self.pos_maxy = s.split()
 
 	def setPiece(self, data):
 		#self.printout.publish('midlevel: piece is %s' %self.piece)
 		print 'setting piece data'
 		pix_x, pix_y, th = data.data
 		x, y = self.pixtopos(pix_x, pix_y)
-		self.piece.set_xyth(x, y, th)
-		self.calibtratePub.publish('midlevel: set piece data to %s' %str(self.piece.info()))
+		if (abs(x - self.piece.info()[0]) > 20 and abs(y - self.piece.info()[1]) > 20):
+			self.calibratePub.publish('midlevel: no movement')
+		else:
+			self.piece.set_xyth(x, y, th)
+			self.pickPiece()
+			self.calibratePub.publish('midlevel: set piece data to %s because of %s' %(str(self.piece.info()), str(data.data)))
 
 
 	def pieceType(self, data):
+		pass
 		letter = data.data	# lower level only sends data when there is a piece, right?
 		print 'letter is', letter
 		if letter != self.piece.letter:			#new piece --OR WATCH FOR FALSE POSITIVES!
@@ -147,10 +147,10 @@ class MidLevel():
 
 
 
-		pixtoticks = (pos_maxx - pos_minx) / (pix_maxy - pix_miny)
+		pixtoticks = (self.pos_maxx - self.pos_minx) / (pix_maxy - pix_miny)
 
-		y = (pix_x - pix_minx) * pixtoticks + pos_miny
-		x = (pix_y - pix_miny) * pixtoticks + pos_minx
+		y = (pix_x - pix_minx) * pixtoticks + self.pos_miny
+		x = (pix_y - pix_miny) * pixtoticks + self.pos_minx
 		self.calibratePub.publish('pix: (%f, %f) to pos (%f, %f)' %(pix_x, pix_y, x, y))
 		return x, y
 

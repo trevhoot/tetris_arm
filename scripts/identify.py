@@ -18,26 +18,26 @@ class DeterminePiece:
     templateImages = []
     templatesNames = []
     templatex=60
-    templatey =8
+    templatey=80
 
     def __init__(self, letter):
 	self.letter = letter
-        rospy.init_node('identify_%s' %self.letter, anonymous=True)
+        rospy.init_node('identify_%s'%self.letter, anonymous=True)
 
-	self.templateImages = []	
         self.templatesNames = os.listdir("../templates")
         for template in self.templatesNames:
             if (template != "Field.jpg" and template[0] == self.letter):
                 templateImage = cv2.imread("../templates/%s" %template, 2)
                 self.templateImages.append(templateImage)
 
-        self.pieceStatePub = rospy.Publisher("pieceState", PieceState)
-        self.pieceTypePub = rospy.Publisher("pieceType", String)
-        self.talker = rospy.Publisher("chatter", String)
-        self.printOut = rospy.Publisher("print", String)
+        #intiates publishers for piece information
+        self.pieceState_pub = rospy.Publisher("pieceState", PieceState)
+        self.pieceType_pub = rospy.Publisher("pieceType", String)
 
         self.bridge = CvBridge()
-	self.image_sub = rospy.Subscriber("processedImage", Image, self.callback)
+
+        self.image_sub = rospy.Subscriber("processedImage",Image,self.callback)
+
 
 
     def callback(self,data):
@@ -49,9 +49,8 @@ class DeterminePiece:
 
         if (pieceList != []):  
             x1, y1, theta, pType = pieceList[0]
-            #self.printOut.publish("lowlevel: there's a piece at %s" %str(pieceList[0]))
-            self.pieceStatePub.publish((x1+self.templatex/2, y1+self.templatey/2, theta))
-            self.pieceTypePub.publish(self.letter) 
+            self.pieceState_pub.publish((x1+self.templatex/2, y1+self.templatey/2, theta))
+            self.pieceType_pub.publish(self.letter) 
 
     def IterateThroughTemplates(self, field):
         pieces = []
@@ -69,11 +68,10 @@ class DeterminePiece:
                 if (len(pieceInfo) != 0):
                     pieces.append(pieceInfo)
                 i += 1
-        if (len(pieces) == None): pieces = []
+        if (len(pieces) == None): pieces = None
         return pieces
 
     def CheckTemplate(self, field, template):
-	self.printOut.publish(str(template))
         template = np.asanyarray(template).astype(np.uint8)
         field = field.astype(np.uint8)
         res = cv2.matchTemplate(field, template, cv2.TM_SQDIFF)
@@ -91,4 +89,3 @@ if __name__ == '__main__':
     letter = sys.argv[1]
     ic = DeterminePiece(letter)
     rospy.spin()
-

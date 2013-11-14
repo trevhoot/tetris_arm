@@ -15,7 +15,7 @@ from tetris_arm.msg import TetArmArray
 class ArmWrapper():
 	def __init__(self, arm = 0):
 		if arm == 0:
-			self.arm = st.StArm('/dev/ttyUSB0', init = True)
+			self.arm = st.StArm(init = True, to = 0.1)
 			self.arm.start()
 		else: self.arm = arm
 
@@ -25,7 +25,7 @@ class ArmWrapper():
 			res = self.arm.cxn.readline()
 			print 'nope'
 			self.arm.start()
-		time.sleep(1)
+		time.sleep(0.2)
 		print 'res =', res
 
 		# initialize arduino serial communication
@@ -39,6 +39,8 @@ class ArmWrapper():
 		self.arm.cartesian()
 		self.arm.move_to(100, 6000, 0)
 		self.arm.rotate_hand(1750)
+		self.arm.rotate_wrist(1000)
+		self.arm.lock_wrist_angle()
 		self.arm.cartesian()
 		#self.go_home()
 
@@ -54,7 +56,7 @@ class ArmWrapper():
 			data = data.data
 		self.x, self.y, th, size = data
 		z = 0
-		self.printOut.publish("lowlevel going to x y th size %f %f %f %f" %(self.x, self.y, th, size))
+		self.printOut.publish("lowlevel: going to x y th size %f %f %f %f" %(self.x, self.y, th, size))
 		if self.y < 2700:
 			self.y = 2700
 		if self.y > 7000:
@@ -84,9 +86,10 @@ class ArmWrapper():
 
 	def rotate_gripper(self, orientation):
 		if orientation == 1:		# vertical
-			self.arm.rotate_wrist(300)
+			self.arm.rotate_wrist(1000)
 		if orientation == 0:		# horizontal
-			self.arm.rotate_wrist(100)
+			self.arm.rotate_wrist(3900)
+		self.arm.lock_wrist_angle()
 		self.arm.cartesian()
 
 	def go_home(self):
@@ -97,12 +100,6 @@ class ArmWrapper():
 def main(args):
 	rospy.init_node('lowlevel', anonymous=True)
 	aw = ArmWrapper()
-	"""aw.goXYTH((1000, 6000, 1, 2))
-	aw.down(1)
-	aw.goXYTH((-1000, 6000, 1, 1))
-	aw.down(2)
-	aw.go_home()
-	"""
 	try:
 		print "spin"
 		rospy.spin()
