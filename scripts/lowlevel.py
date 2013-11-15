@@ -43,6 +43,7 @@ class ArmWrapper():
 		self.arm.rotate_wrist(1000)
 		self.arm.lock_wrist_angle()
 		self.arm.cartesian()
+		self.gripper('2')
 		#self.go_home()
 
 		# Set up talkers and listeners
@@ -69,24 +70,27 @@ class ArmWrapper():
 		self.arm.check_if_done()
 		self.donePub.publish("stopped")
 
-	def down (self, size):
-		if size == 2:
-			
-		self.size = size
+
+	def down (self, data):
+		self.size = data.data
+
 		z = 0			
 		#height to drop by depends on size of gripper
 		if self.size == 2:	#should not be sending down command if you aren't going to close
-			z = -300
+			z = 300
 		if self.size == 1:
-			z = 350
+			z = -350
 		if self.size == 0:
-			z = 200
+			z = -200
 
-		self.arm.move_to(self.x, self.y, -z)
-		self.gripper(str(size))
-		time.sleep(0.5)		#give time to pick up piece!
+		#2 IS WRONG, FIX ME
+		self.arm.cartesian()
 		self.arm.move_to(self.x, self.y, z)
+
 		self.donePub.publish("done")
+		self.gripper(str(self.size))
+		time.sleep(0.5)		#give time to pick up piece!
+		self.arm.move_to(self.x, self.y, 0)
 			
 	def gripper(self, size):
 		self.ser.write(size)
@@ -94,9 +98,9 @@ class ArmWrapper():
 
 	def rotate_gripper(self, orientation):
 		if orientation == 1:		# vertical
-			self.arm.rotate_wrist(1000)
+			self.arm.rotate_wrist(1200)
 		if orientation == 0:		# horizontal
-			self.arm.rotate_wrist(3900)
+			self.arm.rotate_wrist(4100)
 		self.arm.lock_wrist_angle()
 		self.arm.cartesian()
 

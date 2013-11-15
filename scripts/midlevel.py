@@ -76,7 +76,7 @@ class MidLevel():
 		
 		# Set up talkers and listeners
 		self.pieceInfoSub = rospy.Subscriber("pieceState", PieceState, self.setPiece)	# piece data from camera wrapper
-		#self.pieceTypeSub = rospy.Subscriber("pieceType", String, self.pieceType)	# piece type from camera wrapper
+		self.pieceTypeSub = rospy.Subscriber("pieceType", String, self.pieceType)	# piece type from camera wrapper
 		#self.placeCmdSub = rospy.Subscriber("putHere", DownCommand, self.placePiece)		# get index and orientation command from highLevel
 		self.armPub = rospy.Publisher("armCommand", TetArmArray)			# x,y,orientation,size
 		self.downPub = rospy.Publisher("downCmd", UInt16)				# drop to pick up piece of a certain size
@@ -98,21 +98,18 @@ class MidLevel():
 		print 'setting piece data'
 		pix_x, pix_y, th = data.data
 		x, y = self.pixtopos(pix_x, pix_y)
-		if (abs(x - self.piece.info()[0]) > 20 and abs(y - self.piece.info()[1]) > 20):
-			self.calibratePub.publish('midlevel: no movement')
+		if (abs(x - self.piece.info()[0]) < 50 and abs(y - self.piece.info()[1]) < 50):
+			self.printout.publish('midlevel: no movement')
 		else:
 			self.piece.set_xyth(x, y, th)
+			self.printout.publish('midlevel: set piece data to %s because of %s' %(str(self.piece.info()), str(data.data)))
 			self.pickPiece()
-			self.calibratePub.publish('midlevel: set piece data to %s because of %s' %(str(self.piece.info()), str(data.data)))
 
 
 	def pieceType(self, data):
-		pass
 		letter = data.data	# lower level only sends data when there is a piece, right?
-		print 'letter is', letter
 		if letter != self.piece.letter:			#new piece --OR WATCH FOR FALSE POSITIVES!
-			print "NEW LETTER!"
-			self.printout.publish('midlevel: NEW LETTER')
+			self.printout.publish('midlevel: NEW LETTER. Instantiate new piece, then pickPiece')
 			self.piece = Piece(letter)
 			self.pickPiece()
 			self.newPiecePub.publish(String(letter))
@@ -130,9 +127,9 @@ class MidLevel():
 	def pickPiece(self):
 		print self.piece.info()
 		self.armPub.publish(self.piece.info())
-		time = 'right'
+		time = 'wrong'
 		if time == 'right':
-			print 'the time is right!'
+			self.printout.publish('the time is right!')
 			self.downPub.publish(self.piece.size)
 
 	def goHome(self):
