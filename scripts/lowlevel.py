@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 
 import st
@@ -16,7 +15,7 @@ from tetris_arm.msg import TetArmArray
 class ArmWrapper():
 	def __init__(self, arm = 0):
 		if arm == 0:
-			self.arm = st.StArm(init = True, to = 0.1)
+			self.arm = st.StArm(init = False, to = 0.1)
 			self.arm.start()
 		else: self.arm = arm
 
@@ -72,25 +71,28 @@ class ArmWrapper():
 
 
 	def down (self, data):
-		self.size = data.data
-
-		z = 0			
-		#height to drop by depends on size of gripper
-		if self.size == 2:	#should not be sending down command if you aren't going to close
-			z = 300
-		if self.size == 1:
+		size = data.data
+		if size == 2:
+			doneMsg = 'released'
+			if self.size == 1:
+				z = -350
+			if self.size == 0:
+				z = -200		
+		if size == 1:
+			doneMsg = 'grabbed'
 			z = -350
-		if self.size == 0:
+		if size == 0:
+			doneMsg = 'grabbed'
 			z = -200
 
 		#2 IS WRONG, FIX ME
 		self.arm.cartesian()
-		self.arm.move_to(self.x, self.y, z)
-
-		self.donePub.publish("done")
-		self.gripper(str(self.size))
-		time.sleep(0.5)		#give time to pick up piece!
-		self.arm.move_to(self.x, self.y, 0)
+		self.arm.move_to(self.x, self.y, z)	# down
+		self.gripper(str(self.size))		# grab it
+		self.size = size
+		time.sleep(0.5)				# give time to pick up piece!
+		self.arm.move_to(self.x, self.y, 0)	# up
+		self.donePub.publish(doneMsg)
 			
 	def gripper(self, size):
 		self.ser.write(size)
