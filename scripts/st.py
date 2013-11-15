@@ -321,3 +321,9 @@ class StArm():
         self.cxn.flushInput()
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
+
+def check_if_done(self):
+	cmd = TELL + 'FOOBAR'		# Not a real command. If it responds with an error, other processes are done.
+        self.cxn.flushInput()
+        self.cxn.write(cmd + CR)
+        return self.block_on_result(cmd)

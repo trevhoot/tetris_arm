@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 
 import st
@@ -47,6 +48,7 @@ class ArmWrapper():
 		# Set up talkers and listeners
 		self.pieceSub = rospy.Subscriber("armCommand", TetArmArray, self.goXYTH)
 		self.downSub = rospy.Subscriber("downCmd", UInt16, self.down)
+		self.donePub = rospy.Publisher("armStatus", String)
 		self.printOut = rospy.Publisher("print", String)
 		print 'set up pubsubs'
 
@@ -62,9 +64,14 @@ class ArmWrapper():
 		if self.y > 7000:
 			self.y = 7000
 		self.arm.move_to(self.x,self.y,z)
+		self.arm.check_if_done()
 		self.rotate_gripper(th)
+		self.arm.check_if_done()
+		self.donePub.publish("stopped")
 
 	def down (self, size):
+		if size == 2:
+			
 		self.size = size
 		z = 0			
 		#height to drop by depends on size of gripper
@@ -79,6 +86,7 @@ class ArmWrapper():
 		self.gripper(str(size))
 		time.sleep(0.5)		#give time to pick up piece!
 		self.arm.move_to(self.x, self.y, z)
+		self.donePub.publish("done")
 			
 	def gripper(self, size):
 		self.ser.write(size)
