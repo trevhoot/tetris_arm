@@ -78,6 +78,7 @@ class MidLevel():
 		self.pieceInfoSub = rospy.Subscriber("pieceState", PieceState, self.setPiece)	# piece data from camera wrapper
 		self.pieceTypeSub = rospy.Subscriber("pieceType", String, self.pieceType)	# piece type from camera wrapper
 		#self.placeCmdSub = rospy.Subscriber("putHere", DownCommand, self.placePiece)		# get index and orientation command from highLevel
+		self.doneSub = rospy.Subscriber("armStatus", String, self.updateArmStatus)
 		self.armPub = rospy.Publisher("armCommand", TetArmArray)			# x,y,orientation,size
 		self.downPub = rospy.Publisher("downCmd", UInt16)				# drop to pick up piece of a certain size
 		self.newPiecePub = rospy.Publisher("newPiece", String)				# announce newPiece to highLevel
@@ -150,6 +151,13 @@ class MidLevel():
 		x = (pix_y - pix_miny) * pixtoticks + self.pos_minx
 		self.calibratePub.publish('pix: (%f, %f) to pos (%f, %f)' %(pix_x, pix_y, x, y))
 		return x, y
+
+	def updateArmStatus(self,data):
+		s = data.data
+		if s == 'atXY':  #if gets to xy position
+			self.inPosition = 1
+		elif s == 'downComlete':  #if down command is done
+			self. 
 
 def main(args):
 	rospy.init_node('midlevel', anonymous=True)

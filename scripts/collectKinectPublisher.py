@@ -44,7 +44,7 @@ class image_converter:
     self.processedImage_pub = rospy.Publisher("processedImage", Image)
 
 	 #placeholder for image
-    cv2.namedWindow("Image window",1)
+    cv2.namedWindow("Image window")
 	
     self.bridge = CvBridge()
 	
@@ -79,8 +79,9 @@ class image_converter:
 
 	  #extracts the areas that are taller than just under the height of the pieces
     whatisthis, thresh1 = cv2.threshold(crop_image, 240, 250, cv2.THRESH_BINARY)
-    #Display image 
-    #cv2.imshow("Image window", thresh1)
+    #Display image \
+    print thresh1
+    cv2.imshow("Image window", thresh1)
     
     #self.bridge.cv_to_imgmsg(thresh1)
     msg = cv.fromarray(thresh1)
