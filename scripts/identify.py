@@ -22,6 +22,8 @@ class DeterminePiece:
 
     def __init__(self, letter):
 	self.letter = letter
+	letterList = ['I', 'L', 'J', 'O', 'Z', 'S', 'T']
+	self.letterIndex = letterList.index(self.letter)
         rospy.init_node('identify_%s'%self.letter, anonymous=True)
 
         self.templatesNames = os.listdir("../templates")
@@ -49,7 +51,7 @@ class DeterminePiece:
 
         if (pieceList != []):  
             x1, y1, theta, pType = pieceList[0]
-            self.pieceState_pub.publish((x1+self.templatex/2, y1+self.templatey/2, theta))
+            self.pieceState_pub.publish((x1+self.templatex/2, y1+self.templatey/2, theta, self.letterIndex))
             self.pieceType_pub.publish(self.letter) 
 
     def IterateThroughTemplates(self, field):
@@ -75,7 +77,7 @@ class DeterminePiece:
         template = np.asanyarray(template).astype(np.uint8)
         field = field.astype(np.uint8)
         res = cv2.matchTemplate(field, template, cv2.TM_SQDIFF)
-        threshold =.2
+        threshold =.25
         minVal,maxVal,minLoc,maxLoc = cv2.minMaxLoc(res)
 
         if (minVal/100000000 < threshold):

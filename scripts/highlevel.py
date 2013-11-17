@@ -126,6 +126,7 @@ class Board():
 		self.printOut.publish("highlevel: got a new piece: %s" %piece)
 		self.newPiece(data.data)
 		orientation, index = self.choosePlace()
+		self.printOut.publish("highlevel: go to index %d, orientation %d" %(index,orientation))
 		self.placeCmdPub.publish((orientation, index))
 
 

@@ -12,10 +12,10 @@ class DeterminePiece:
     templatesNames = []
 
     def __init__(self):
-        self.templatesNames = os.listdir("/home/victoria/catkin_ws/src/tetris_arm/templates")
+        self.templatesNames = os.listdir("../templates")
         for template in self.templatesNames:
             if (template != "Field.jpg"):
-                templateImage = cv2.imread("templates/%s" %template, 2)
+                templateImage = cv2.imread("..templates/%s" %template, 2)
                 #print type(templateImage)
                 self.templateImages.append(templateImage)
 

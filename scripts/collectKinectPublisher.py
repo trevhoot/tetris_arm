@@ -44,33 +44,32 @@ class image_converter:
     self.processedImage_pub = rospy.Publisher("processedImage", Image)
 
 	 #placeholder for image
-    cv2.namedWindow("Image window")
+    cv2.namedWindow("Image window", 1)
 	
     self.bridge = CvBridge()
 	
 	 #subscibes to depth image from kinnect and passes it to callback fn.
     self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image,self.callback) 
 
-    rospy.spin()
 
   def callback(self,data):
 
 
 	 #converts ROS Image message pointer to OpenCV message in 16bit mono format
     try:
-        cv_image = self.bridge.imgmsg_to_cv(data, "16UC1")
+      cv_image = self.bridge.imgmsg_to_cv(data, "16UC1")
     except CvBridgeError, e:
       print e
 
-	  #parse out location RIO (the tredmill area)
-    crop_image = cv_image[60:240,276:565]
+	  #parse out location RIO (the treadmill area)
+    crop_image = cv_image[68:243,230:515]
 
     templatex=60
     templatey =80
     
 	 #converts image to numpy array and scales the 16bit for depth RIO
 	 #values we are interested in are in the 12000 value range. scale to 250 before convert to 8bit to not lose info
-    crop_image = (np.asanyarray(crop_image) -1220) *100
+    crop_image = (np.asanyarray(crop_image) -1250) *100
    
 	  #converts 16mono to 8mono to be threshold processed
     crop_image = (crop_image/2.**8).astype(np.uint8)
@@ -82,6 +81,7 @@ class image_converter:
     #Display image \
     print thresh1
     cv2.imshow("Image window", thresh1)
+    cv2.waitKey(3)
     
     #self.bridge.cv_to_imgmsg(thresh1)
     msg = cv.fromarray(thresh1)

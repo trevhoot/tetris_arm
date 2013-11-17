@@ -39,11 +39,12 @@ class ArmWrapper():
 		self.arm.cartesian()
 		self.arm.move_to(100, 6000, 0)
 		self.arm.rotate_hand(1750)
-		self.arm.rotate_wrist(1000)
+		self.rotate_gripper(1)
 		self.arm.lock_wrist_angle()
-		self.arm.cartesian()
 		self.gripper('2')
-		#self.go_home()
+		self.size = 2
+		self.arm.cartesian()
+		self.arm.move_to(3000,3000,0)
 
 		# Set up talkers and listeners
 		self.pieceSub = rospy.Subscriber("armCommand", TetArmArray, self.goXYTH)
@@ -63,15 +64,18 @@ class ArmWrapper():
 			self.y = 2700
 		if self.y > 7000:
 			self.y = 7000
+		self.arm.cartesian()
 		self.arm.move_to(self.x,self.y,z)
 		self.arm.check_if_done()
 		self.rotate_gripper(th)
 		self.arm.check_if_done()
+		self.printOut.publish("lowlevel: done moving")
 		self.donePub.publish("stopped")
 
 
 	def down (self, data):
 		size = data.data
+		self.printOut.publish("lowlevel.down: I heard %d" %size)
 		if size == 2:
 			doneMsg = 'released'
 			if self.size == 1:
@@ -91,6 +95,7 @@ class ArmWrapper():
 		self.gripper(str(self.size))		# grab it
 		self.size = size
 		time.sleep(0.5)				# give time to pick up piece!
+		self.arm.cartesian()
 		self.arm.move_to(self.x, self.y, 0)	# up
 		self.donePub.publish(doneMsg)
 			
@@ -100,11 +105,10 @@ class ArmWrapper():
 
 	def rotate_gripper(self, orientation):
 		if orientation == 1:		# vertical
-			self.arm.rotate_wrist(1200)
+			self.arm.rotate_wrist(300)
 		if orientation == 0:		# horizontal
-			self.arm.rotate_wrist(4100)
+			self.arm.rotate_wrist(3700)
 		self.arm.lock_wrist_angle()
-		self.arm.cartesian()
 
 	def go_home(self):
 		self.goXYTH((100,6000,0,2))
