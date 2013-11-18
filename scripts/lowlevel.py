@@ -15,7 +15,7 @@ from tetris_arm.msg import TetArmArray
 class ArmWrapper():
 	def __init__(self, arm = 0):
 		if arm == 0:
-			self.arm = st.StArm(init = False, to = 0.1)
+			self.arm = st.StArm(dev = '/dev/ttyUSB1', init = False, to = 0.1)
 			self.arm.start()
 		else: self.arm = arm
 
@@ -37,8 +37,8 @@ class ArmWrapper():
 		self.x = 100
 		self.y = 6000
 		self.arm.cartesian()
-		self.arm.move_to(100, 6000, 0)
-		self.arm.rotate_hand(1750)
+		self.arm.move_to(0, 6000, 0)
+		self.arm.rotate_hand(1800)
 		self.rotate_gripper(1)
 		self.arm.lock_wrist_angle()
 		self.gripper('2')
@@ -49,7 +49,8 @@ class ArmWrapper():
 		# Set up talkers and listeners
 		self.pieceSub = rospy.Subscriber("armCommand", TetArmArray, self.goXYTH)
 		self.downSub = rospy.Subscriber("downCmd", UInt16, self.down)
-		self.donePub = rospy.Publisher("armStatus", String)
+		self.donePub = rospy.Publisher("inPosition", String)
+		self.gripperPub = rospy.Publisher("gripper", String)
 		self.printOut = rospy.Publisher("print", String)
 		print 'set up pubsubs'
 
@@ -76,6 +77,11 @@ class ArmWrapper():
 	def down (self, data):
 		size = data.data
 		self.printOut.publish("lowlevel.down: I heard %d" %size)
+		if size == 3:
+			doneMsg = 'wait'
+			self.size = 2
+			size = 2
+			z = 0
 		if size == 2:
 			doneMsg = 'released'
 			if self.size == 1:
@@ -97,7 +103,7 @@ class ArmWrapper():
 		time.sleep(0.5)				# give time to pick up piece!
 		self.arm.cartesian()
 		self.arm.move_to(self.x, self.y, 0)	# up
-		self.donePub.publish(doneMsg)
+		self.gripperPub.publish(doneMsg)
 			
 	def gripper(self, size):
 		self.ser.write(size)

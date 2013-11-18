@@ -10,34 +10,37 @@ import rospy
 from std_msgs.msg import String, Bool, UInt16
 from tetris_arm.msg import TetArmArray, PieceState, DownCommand
 
-import armStatusListener as asl
+#import armStatusListener as asl
 
 i, l, j, o, z, s, t = 'I', 'L', 'J', 'O', 'Z', 'S', 'T'
 
 class MidLevel():
 	def __init__(self):
 		
-		# Set up talkers and listeners
-		self.pieceInfoSub = rospy.Subscriber("pieceState", PieceState, self.setPiece)	# piece data from camera wrapper
-		self.placeCmdSub = rospy.Subscriber("putHere", DownCommand, self.placePiece)		# get index and orientation command from highLevel
-		self.doneSub = rospy.Subscriber("armStatus", String, self.updateArmStatus)	# Arm status from low level
-		self.armPub = rospy.Publisher("armCommand", TetArmArray)			# x,y,orientation,size
-		self.downPub = rospy.Publisher("downCmd", UInt16)				# drop to pick up piece of a certain size
-		self.newPiecePub = rospy.Publisher("newPiece", String)				# announce newPiece to highLevel
 
-		self.printOut = rospy.Publisher('print', String)
-		self.calibratePub = rospy.Publisher('calibrate', String)
 	
-		self.asl = asl.ArmStatusListener()
-
-		dummyPiece = Piece()
+		# Initializations
+		dummyPiece = Piece()							# initializes first piece as x to detect change
 		self.piece = dummyPiece
 		self.letterList = [i, l, j, o, z, s, t]
 		self.holding = 0
 
-		self.pos_minx = -1800#-1750	# Corresponding arm positions
-		self.pos_maxx = 1950#1880
+		self.pos_minx = -1800    #-1750 actual tested value	# Corresponding arm positions (width of belt)
+		self.pos_maxx = 1950     #1880 acutal tested value
 		self.pos_miny = 6100		#maxy ~ 11500
+
+		# Set up talkers and listeners
+		self.pieceInfoSub = rospy.Subscriber("pieceState", PieceState, self.setPiece)	# piece (x,y,orientation,type) data from camera wrapper
+		self.placeCmdSub = rospy.Subscriber("putHere", DownCommand, self.setPiecePlacement)	# get index and orientation command from highLevel
+		self.doneSub = rospy.Subscriber("inPosition", String, self.timingLoop)			# Get when arm is finished moving from low level
+		self.gripperSub = rospy.Subscriber("gripper", String, self.afterGripper)		# Get when gripper is done actuating (and status)
+
+		self.armPub = rospy.Publisher("armCommand", TetArmArray)						# x,y,orientation,size
+		self.downPub = rospy.Publisher("downCmd", UInt16)								# drop to pick or place piece of a certain size
+		self.newPiecePub = rospy.Publisher("newPiece", String)							# announce newPiece type to highLevel
+
+		self.printOut = rospy.Publisher('print', String)								# debugging
+		self.calibratePub = rospy.Publisher('calibrate', String)						# debugging
 
 
 	def setPiece(self, data):
@@ -64,50 +67,40 @@ class MidLevel():
 			self.pickPiece()
 
 		
-	def placePiece(self, data):
+	def setPiecePlacement(self, data):
 		orientation, index = data.data
-		while self.holding != 1:
-			time.sleep(0.1)
-			self.printOut.publish('midlevel.placePiece: waiting for holding = 1')
-			#time.sleep(1)
-			#self.holding = 1
 		print 'command from high level:', orientation, index
 		x = int(index*300.-1400)  #maps [0 to 10] to [-1400 to 1600]
-		self.printOut.publish('midlevel: go to %d (%d), %d' %(index, x, orientation))
-		self.armPub.publish((x,6000,orientation,self.piece.size))
-		self.inPosition = 0
-		while self.inPosition == 0:
-			time.sleep(0.1)
-			#self.printOut.publish('midlevel.placePiece: waiting for inPosition = 1')
-			#time.sleep(1)
-			#self.inPosition = 1
-		self.downPub.publish(2)
-		self.goHome()
+		self.printOut.publish('midlevel.setPiecePlacement: set (x, orientation( to (%d, %d)' %(x, orientation))
+		self.piece.toOrientation = orientation
+		self.piece.toX = x
 
+	def placePiece(self):
+		self.armPub.publish((self.piece.toX,6000,self.piece.toOrientation,self.piece.size))
+		self.piece.size = 2
+
+	def afterGripper(self, data):
+		s = data.data
+		if s == 'released':
+			self.goHome()
+		elif s == 'grabbed':
+			self.placePiece()
+		elif s == 'wait':
+			pass
 
 	def pickPiece(self):
 		self.printOut.publish('midlevel.pickPiece: ArmCommand down to lowlevel')
 		print self.piece.info()
 		self.armPub.publish(self.piece.info())
-		self.inPosition = 0
-		while self.inPosition == 0:
-			time.sleep(0.1)
-			#self.printOut.publish('midlevel.pickPiece: waiting for inPosition = 1')
-			#time.sleep(1)
-			#self.inPosition = 1
 
+	def timingLoop(self, data):			#terrible name; come up with a new one.
 		the_time = 'right'
 		if the_time == 'right':
 			self.printOut.publish('the time is right!')
 			self.downPub.publish(self.piece.size)
 
 	def goHome(self):
-		self.armPub.publish((3000,3000,0,2))
-		while self.inPosition == 0:
-			time.sleep(0.1)
-			self.printOut.publish('midlevel.goHome: blocking')
-			#time.sleep(1)
-			#self.inPosition = 1
+		self.armPub.publish((3000,3000,0,3))
 
 	def pixtopos(self, pix_x, pix_y):
 		# Board cropped to [68:243,230:515] in collectKinectNode.py
