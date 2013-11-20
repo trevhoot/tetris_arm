@@ -11,7 +11,7 @@ int gripAngle = 0;      // define incoming angle command from the computer
 
 void setup() {
   motor.attach(9);  	// attaches the servo on pin 9 to the servo object 
-  gripper.attach(10);  	// attaches the servo on pin 9 to the servo object 
+  gripper.attach(10);  	// attaches the gripper on pin 9 to the servo object 
 
   Serial.begin(9600);
 }
@@ -21,6 +21,7 @@ void loop() {
   gripper.write(gripAngle);
   Serial.write('gripAngle'); 
   delayMicroseconds(100);
+  motor.writeMicroseconds(1200);
   
 }
 
