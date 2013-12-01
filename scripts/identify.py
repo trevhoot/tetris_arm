@@ -34,7 +34,6 @@ class DeterminePiece:
 
         #intiates publishers for piece information
         self.pieceState_pub = rospy.Publisher("pieceState", PieceState)
-        self.pieceType_pub = rospy.Publisher("pieceType", String)
 
         self.bridge = CvBridge()
 
@@ -51,8 +50,7 @@ class DeterminePiece:
 
         if (pieceList != []):  
             x1, y1, theta, pType = pieceList[0]
-            self.pieceState_pub.publish((x1+self.templatex/2, y1+self.templatey/2, theta, self.letterIndex))
-            self.pieceType_pub.publish(self.letter) 
+            self.pieceState_pub.publish((x1+self.templatex/2, y1+self.templatey/2, theta, self.letterIndex)) 
 
     def IterateThroughTemplates(self, field):
         pieces = []

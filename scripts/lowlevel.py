@@ -30,21 +30,20 @@ class ArmWrapper():
 
 		# initialize arduino serial communication
 		self.ser = serial.Serial('/dev/ttyACM0', 9600)
-		self.gripper('2')					#start gripper open)
 		
 
 		# set up arm starting position
+		self.arm.cartesian()
 		self.x = 100
 		self.y = 6000
-		self.arm.cartesian()
-		self.arm.move_to(0, 6000, 0)
+		self.arm.move_to(self.x, self.y, 0)
 		self.arm.rotate_hand(1800)
-		self.rotate_gripper(1)
+		self.rotate_gripper(1)		#start gripper vertical
 		self.arm.lock_wrist_angle()
-		self.gripper('2')
 		self.size = 2
+		self.gripper('2')		#start gripper open
 		self.arm.cartesian()
-		self.arm.move_to(3000,3000,0)
+		self.arm.move_to(3000,3000,0)	#wait off the board
 
 		# Set up talkers and listeners
 		self.pieceSub = rospy.Subscriber("armCommand", TetArmArray, self.goXYTH)
@@ -54,6 +53,7 @@ class ArmWrapper():
 		self.printOut = rospy.Publisher("print", String)
 		print 'set up pubsubs'
 
+	
 
 	def goXYTH(self, data):
 		if type(data) != tuple:
@@ -77,30 +77,31 @@ class ArmWrapper():
 	def down (self, data):
 		size = data.data
 		self.printOut.publish("lowlevel.down: I heard %d" %size)
+		z = 500
 		if size == 3:
 			doneMsg = 'wait'
 			self.size = 2
 			size = 2
 			z = 0
-		if size == 2:
+		if size == 2:			#open
 			doneMsg = 'released'
 			if self.size == 1:
-				z = -350
+				z = -700
 			if self.size == 0:
-				z = -200		
+				z = -500		
 		if size == 1:
 			doneMsg = 'grabbed'
-			z = -350
+			z = -700
 		if size == 0:
 			doneMsg = 'grabbed'
-			z = -200
+			z = -500
 
 		#2 IS WRONG, FIX ME
 		self.arm.cartesian()
 		self.arm.move_to(self.x, self.y, z)	# down
 		self.gripper(str(self.size))		# grab it
 		self.size = size
-		time.sleep(0.5)				# give time to pick up piece!
+		time.sleep(1.5)				# give time to pick up piece!
 		self.arm.cartesian()
 		self.arm.move_to(self.x, self.y, 0)	# up
 		self.gripperPub.publish(doneMsg)
@@ -111,9 +112,9 @@ class ArmWrapper():
 
 	def rotate_gripper(self, orientation):
 		if orientation == 1:		# vertical
-			self.arm.rotate_wrist(300)
+			self.arm.rotate_wrist(1200)
 		if orientation == 0:		# horizontal
-			self.arm.rotate_wrist(3700)
+			self.arm.rotate_wrist(4000)
 		self.arm.lock_wrist_angle()
 
 	def go_home(self):

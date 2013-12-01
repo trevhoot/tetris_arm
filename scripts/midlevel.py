@@ -25,9 +25,9 @@ class MidLevel():
 		self.letterList = [i, l, j, o, z, s, t]
 		self.holding = 0
 
-		self.pos_minx = -1800    #-1750 actual tested value	# Corresponding arm positions (width of belt)
-		self.pos_maxx = 1950     #1880 acutal tested value
-		self.pos_miny = 6100		#maxy ~ 11500
+		self.pos_minx = -1500    #-1500 actual tested value	# Corresponding arm positions (width of belt)
+		self.pos_maxx = 1700     #1700 acutal tested value
+		self.pos_miny = 5700		#maxy ~ 11500
 
 		# Set up talkers and listeners
 		self.pieceInfoSub = rospy.Subscriber("pieceState", PieceState, self.setPiece)	# piece (x,y,orientation,type) data from camera wrapper
@@ -35,13 +35,23 @@ class MidLevel():
 		self.doneSub = rospy.Subscriber("inPosition", String, self.timingLoop)			# Get when arm is finished moving from low level
 		self.gripperSub = rospy.Subscriber("gripper", String, self.afterGripper)		# Get when gripper is done actuating (and status)
 
-		self.armPub = rospy.Publisher("armCommand", TetArmArray)						# x,y,orientation,size
-		self.downPub = rospy.Publisher("downCmd", UInt16)								# drop to pick or place piece of a certain size
-		self.newPiecePub = rospy.Publisher("newPiece", String)							# announce newPiece type to highLevel
+		self.armPub = rospy.Publisher("armCommand", TetArmArray)				# x,y,orientation,size
+		self.downPub = rospy.Publisher("downCmd", UInt16)					# drop to pick or place piece of a certain size
+		self.newPiecePub = rospy.Publisher("newPiece", String)					# announce newPiece type to highLevel
 
-		self.printOut = rospy.Publisher('print', String)								# debugging
-		self.calibratePub = rospy.Publisher('calibrate', String)						# debugging
+		self.printOut = rospy.Publisher('print', String)							# debugging
+		#self.calibratePub = rospy.Publisher('calibrate', String)						# debugging
 
+
+		self.calibrateSub = rospy.Subscriber("calibrate", String, self.calibrate)
+
+
+	def calibrate(self, data):
+		minx, maxx, miny = list(data.data)
+		self.printOut.publish(str(minx, maxx, miny))
+		self.pos_minx = minx
+		self.pos_maxx = maxx
+		self.pos_miny = miny
 
 	def setPiece(self, data):
 		#self.printOut.publish('midlevel: piece is %s' %self.piece)
@@ -77,7 +87,7 @@ class MidLevel():
 
 	def placePiece(self):
 		self.armPub.publish((self.piece.toX,6000,self.piece.toOrientation,self.piece.size))
-		self.piece.size = 2
+		self.piece = Piece()
 
 	def afterGripper(self, data):
 		s = data.data
@@ -115,20 +125,8 @@ class MidLevel():
 
 		y = (pix_x - pix_minx) * pixtoticks + self.pos_miny
 		x = (pix_y - pix_miny) * pixtoticks + self.pos_minx
-		self.calibratePub.publish('pix: (%f, %f) to pos (%f, %f)' %(pix_x, pix_y, x, y))
+		#self.calibratePub.publish('pix: (%f, %f) to pos (%f, %f)' %(pix_x, pix_y, x, y))
 		return x, y
-
-	def updateArmStatus(self,data):
-		s = data.data
-		if s == 'stopped':  #if gets to xy position
-			self.printOut.publish('midlevel.updateArmStatus: in position!')
-			self.inPosition = 1
-		elif s == 'grabbed':
-			self.printOut.publish('midlevel.updateArmStatus: holding!')
-			self.holding = 1
-		elif s == 'released': 
-			self.printOut.publish('midlevel.updateArmStatus: released!')
-			self.holding = 0
 
 class Piece():
 	def __init__(self, letter = 'X'):
@@ -137,11 +135,11 @@ class Piece():
 		self.y = 6000
 		self.orientation = 0
 		if letter in [i, l, j]:
-			self.size = 0
+			self.size = 2
 		if letter in [o, z, s, t]:
 			self.size = 1
 		if letter == 'X':
-			self.size = 2 		#This is a placeholder and it is bad.
+			self.size = 3 		#This is a placeholder and it is bad.
 
 		self.jl_offset = 10		#how much is the com offset by?
 
