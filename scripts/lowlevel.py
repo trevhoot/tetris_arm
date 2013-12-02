@@ -15,7 +15,7 @@ from tetris_arm.msg import TetArmArray
 class ArmWrapper():
 	def __init__(self, arm = 0):
 		if arm == 0:
-			self.arm = st.StArm(dev = '/dev/ttyUSB1', init = False, to = 0.1)
+			self.arm = st.StArm(dev = '/dev/ttyUSB0', init = False, to = 0.1)
 			self.arm.start()
 		else: self.arm = arm
 
@@ -38,10 +38,10 @@ class ArmWrapper():
 		self.y = 6000
 		self.arm.move_to(self.x, self.y, 0)
 		self.arm.rotate_hand(1800)
-		self.rotate_gripper(1)		#start gripper vertical
 		self.arm.lock_wrist_angle()
+		self.rotate_gripper(1)		#start gripper vertical
 		self.size = 2
-		self.gripper('2')		#start gripper open
+		self.gripper(str(self.size))		#start gripper open
 		self.arm.cartesian()
 		self.arm.move_to(3000,3000,0)	#wait off the board
 
@@ -49,7 +49,9 @@ class ArmWrapper():
 		self.pieceSub = rospy.Subscriber("armCommand", TetArmArray, self.goXYTH)
 		self.downSub = rospy.Subscriber("downCmd", UInt16, self.down)
 		self.donePub = rospy.Publisher("inPosition", String)
-		self.gripperPub = rospy.Publisher("gripper", String)
+		self.actuatorPub = rospy.Publisher("actuated", String)
+		self.gripperPub = rospy.Publisher("gripperSize", UInt16)
+		self.gripperSub = rospy.Subscriber("gripperDone", UInt16, self.gripperDone)
 		self.printOut = rospy.Publisher("print", String)
 		print 'set up pubsubs'
 
@@ -60,7 +62,7 @@ class ArmWrapper():
 			data = data.data
 		self.x, self.y, th, size = data
 		z = 0
-		self.printOut.publish("lowlevel: going to x y th size %f %f %f %f" %(self.x, self.y, th, size))
+		self.printOut.publish("lowlevel: going to x y th %f %f %f" %(self.x, self.y, th))
 		if self.y < 2700:
 			self.y = 2700
 		if self.y > 7000:
@@ -70,11 +72,11 @@ class ArmWrapper():
 		self.arm.check_if_done()
 		self.rotate_gripper(th)
 		self.arm.check_if_done()
-		self.printOut.publish("lowlevel: done moving")
+		self.printOut.publish("lowlevel: done moving to %d, %d" %(self.x, self.y))
 		self.donePub.publish("stopped")
 
 
-	def down (self, data):
+	def down(self, data):
 		size = data.data
 		self.printOut.publish("lowlevel.down: I heard %d" %size)
 		z = 500
@@ -88,23 +90,23 @@ class ArmWrapper():
 			if self.size == 1:
 				z = -700
 			if self.size == 0:
-				z = -500		
+				z = -550		
 		if size == 1:
 			doneMsg = 'grabbed'
 			z = -700
 		if size == 0:
 			doneMsg = 'grabbed'
-			z = -500
+			z = -550
 
 		#2 IS WRONG, FIX ME
 		self.arm.cartesian()
 		self.arm.move_to(self.x, self.y, z)	# down
-		self.gripper(str(self.size))		# grab it
+		self.gripper(str(size))		# grab it
 		self.size = size
 		time.sleep(1.5)				# give time to pick up piece!
 		self.arm.cartesian()
 		self.arm.move_to(self.x, self.y, 0)	# up
-		self.gripperPub.publish(doneMsg)
+		self.actuatorPub.publish(doneMsg)
 			
 	def gripper(self, size):
 		self.ser.write(size)
@@ -120,7 +122,8 @@ class ArmWrapper():
 	def go_home(self):
 		self.goXYTH((100,6000,0,2))
 		
-		
+	def gripperDone(self, data):
+		self.actuatorPub.publish('Arduino has reported that the gripper is done moving')
 
 def main(args):
 	rospy.init_node('lowlevel', anonymous=True)

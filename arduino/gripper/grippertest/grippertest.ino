@@ -24,7 +24,7 @@ void loop()
     }
   
     if (incomingByte == '1') {
-      myservo.write(90);                  
+      myservo.write(95);                  
       delay(15);
       digitalWrite(13,LOW);
     }

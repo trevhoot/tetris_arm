@@ -10,41 +10,58 @@ import rospy
 from std_msgs.msg import String, Bool, UInt16
 from tetris_arm.msg import TetArmArray, PieceState, DownCommand
 
-#import armStatusListener as asl
 
 i, l, j, o, z, s, t = 'I', 'L', 'J', 'O', 'Z', 'S', 'T'
 
 class MidLevel():
 	def __init__(self):
 		
-
-	
-		# Initializations
-		dummyPiece = Piece()							# initializes first piece as x to detect change
+		dummyPiece = Piece()				# initializes first piece as x to detect change
 		self.piece = dummyPiece
-		self.letterList = [i, l, j, o, z, s, t]
-		self.holding = 0
+		self.letterList = [i, l, j, o, z, s, t]		# letter seen by camera comes in as an index in this list
+		self.holding = 0				# toggle when pick/place piece
+		self.moving = 0					# toggle when treadmill is moving/not moving	TODO
+		self.inPosition = 0				# toggle when arm is in position or not
 
-		self.pos_minx = -1500    #-1500 actual tested value	# Corresponding arm positions (width of belt)
+		self.threshold = 100000   			# bogus y value that will be reset when the piece is moving TODO
+		self.speed = 0		 			# default value: treadmill isn't moving.
+		self.pickUpLine = 6000
+
+		# used to calibrate image to arm
+		self.pos_minx = -1500    #-1500 actual tested value
 		self.pos_maxx = 1700     #1700 acutal tested value
-		self.pos_miny = 5700		#maxy ~ 11500
+		self.pos_miny = 5500		#maxy ~ 11500
+
 
 		# Set up talkers and listeners
 		self.pieceInfoSub = rospy.Subscriber("pieceState", PieceState, self.setPiece)	# piece (x,y,orientation,type) data from camera wrapper
 		self.placeCmdSub = rospy.Subscriber("putHere", DownCommand, self.setPiecePlacement)	# get index and orientation command from highLevel
 		self.doneSub = rospy.Subscriber("inPosition", String, self.timingLoop)			# Get when arm is finished moving from low level
-		self.gripperSub = rospy.Subscriber("gripper", String, self.afterGripper)		# Get when gripper is done actuating (and status)
+		self.gripperSub = rospy.Subscriber("actuated", String, self.afterGripper)		# Get when gripper is done actuating (and status)
+		self.treadmillSub = rospy.Subscriber("treadmillDone", String, self.afterTreadmill)	# Get when treadmill is done changing
+		self.speedSub = rospy.Subscriber("beltSpeed", String, self.updateThreshold)		
 
 		self.armPub = rospy.Publisher("armCommand", TetArmArray)				# x,y,orientation,size
 		self.downPub = rospy.Publisher("downCmd", UInt16)					# drop to pick or place piece of a certain size
 		self.newPiecePub = rospy.Publisher("newPiece", String)					# announce newPiece type to highLevel
+		self.treadmillPub = rospy.Publisher("treadmillMotor", String)
+		self.timingPub = rospy.Publisher("inPosition", String)
 
 		self.printOut = rospy.Publisher('print', String)							# debugging
 		#self.calibratePub = rospy.Publisher('calibrate', String)						# debugging
-
-
 		self.calibrateSub = rospy.Subscriber("calibrate", String, self.calibrate)
+		
+	def afterTreadmill(self, data):
+		return
 
+	def updateThreshold(self, data):
+		speed = data.data
+		if speed == 0:
+			self.moving = 0
+		else: self.moving = 1
+		timeDown = 0.5			#time to actuate gripper
+		self.threshold = self.pickUpLine + speed * timeDown
+		
 
 	def calibrate(self, data):
 		minx, maxx, miny = list(data.data)
@@ -58,12 +75,15 @@ class MidLevel():
 		print 'setting piece data'
 		pix_x, pix_y, th, letterindex = data.data
 		letter = self.letterList[letterindex]
+		x, y = self.pixtopos(pix_x, pix_y)
+
+		if y < self.threshold:
+			self.timingPub.publish("now")
 
 		if letter != self.piece.letter:			#new piece --OR WATCH FOR FALSE POSITIVES!
 			self.printOut.publish('midlevel.pieceType: NEW LETTER. Instantiate new piece, then pickPiece')
 			self.piece = Piece(letter)
 			self.newPiecePub.publish(String(letter))
-			x, y = self.pixtopos(pix_x, pix_y)
 			self.piece.set_xyth(x, y, th)
 			self.pickPiece()
 		return
@@ -81,36 +101,61 @@ class MidLevel():
 		orientation, index = data.data
 		print 'command from high level:', orientation, index
 		x = int(index*300.-1400)  #maps [0 to 10] to [-1400 to 1600]
-		self.printOut.publish('midlevel.setPiecePlacement: set (x, orientation( to (%d, %d)' %(x, orientation))
+		self.printOut.publish('midlevel.setPiecePlacement: set (x, orientation) to (%d, %d)' %(x, orientation))
 		self.piece.toOrientation = orientation
 		self.piece.toX = x
 
 	def placePiece(self):
-		self.armPub.publish((self.piece.toX,6000,self.piece.toOrientation,self.piece.size))
-		self.piece = Piece()
+		self.armPub.publish((self.piece.toX,self.pickUpLine,self.piece.toOrientation,self.piece.size))
 
 	def afterGripper(self, data):
 		s = data.data
 		if s == 'released':
 			self.goHome()
+			self.holding = 0
 		elif s == 'grabbed':
+			self.holding = 1
 			self.placePiece()
 		elif s == 'wait':
 			pass
 
 	def pickPiece(self):
 		self.printOut.publish('midlevel.pickPiece: ArmCommand down to lowlevel')
-		print self.piece.info()
-		self.armPub.publish(self.piece.info())
+		x, y, th, size = self.piece.info()
+		if self.moving == 1:
+			self.armPub.publish([x, self.pickUpLine, th, size])
+		if self.moving == 0:
+			self.armPub.publish(self.piece.info())
 
 	def timingLoop(self, data):			#terrible name; come up with a new one.
-		the_time = 'right'
-		if the_time == 'right':
-			self.printOut.publish('the time is right!')
-			self.downPub.publish(self.piece.size)
+		if data.data == 'stopped':
+			self.inPosition = 1
+			if self.moving = 0:
+				if self.holding == 1:
+					sizeCmd = 2
+				if self.holding == 0:
+					sizeCmd = self.piece.size
+				self.downPub.publish(sizeCmd)
+				self.printOut.publish('midlevel.timingLoop: the arm is in position! sending %f' %sizeCmd)
+			return
+			self.treadmillPub.publish(self.speed)
+
+		if data.data == 'now':
+			if self.inPosition == 1:
+				self.inPosition = 0
+				if self.holding == 1:
+					sizeCmd = 2
+				if self.holding == 0:
+					sizeCmd = self.piece.size
+				self.downPub.publish(sizeCmd)
+				self.printOut.publish('midlevel.timingLoop: the time is right! sending %f' %sizeCmd)
+			else: 
+				return
+				self.treadmillPub.publish(0)     #stop the motor
 
 	def goHome(self):
 		self.armPub.publish((3000,3000,0,3))
+		self.piece = Piece()
 
 	def pixtopos(self, pix_x, pix_y):
 		# Board cropped to [68:243,230:515] in collectKinectNode.py
@@ -135,7 +180,7 @@ class Piece():
 		self.y = 6000
 		self.orientation = 0
 		if letter in [i, l, j]:
-			self.size = 2
+			self.size = 0
 		if letter in [o, z, s, t]:
 			self.size = 1
 		if letter == 'X':
