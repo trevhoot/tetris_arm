@@ -3,35 +3,44 @@
 #include <std_msgs/String.h>
 #include <ros/time.h>
 
-Servo myservo;  
+Servo gripperServo;  
 Servo tread;
 
 
 String data = String("Hello");
 
-std_msgs::String str_msg;
-ros::Publisher chatter("chatter", &str_msg);
+std_msgs::String tick_msg;
+std_msgs::String gripper_msg;
+ros::Publisher chatter("encoderTick", &tick_msg);
+ros::Publisher gripperPub("actuated", &gripper_msg);
 
+int encoderPin = 2;
+boolean switchState = false;
+boolean reading;
 
-void messageCb( const std_msgs::String& gripperSize){
+void gripperCb( const std_msgs::String& gripperSize){
   data = gripperSize.data;
   if (data == "open") {
-     myservo.write(0);                 
+     gripperServo.write(0);                 
      delay(15);
      digitalWrite(13,HIGH);
    }
    
-   if (data == "middle") {
-     myservo.write(95);                  
+   if (data == "big") {
+     gripperServo.write(95);                  
      delay(15);
      digitalWrite(13,LOW);
    }
     
-   if (data == "close") {
-     myservo.write(180);                 
+   if (data == "small") {
+     gripperServo.write(180);                 
      delay(15);
    }
    
+}
+
+void treadmillCb( const std_msgs::String& motorSpeed){
+   data = motorSpeed.data;
    if (data == "go"){
     tread.writeMicroseconds(1800);
     delay(50); 
@@ -41,21 +50,20 @@ void messageCb( const std_msgs::String& gripperSize){
      tread.writeMicroseconds(1400);
      delay(50);
    }
-  
-   memcpy(&str_msg.data, millis(), sizeof(millis()));
-   //str_msg.data = (char*)millis();
-   chatter.publish(&str_msg);
 }
 
 ros::NodeHandle  nh;
-ros::Subscriber<std_msgs::String> sub("gripperSize" , messageCb);
+ros::Subscriber<std_msgs::String> gripperSub("gripperSize" , gripperCb);
+ros::Subscriber<std_msgs::String> treadmillSub("treadmillMotor" , treadmillCb);
+
 
 void setup() 
 { 
   tread.attach(9);
-  myservo.attach(8); 
+  gripperServo.attach(8); 
   nh.initNode();
-  nh.subscribe(sub);
+  nh.subscribe(gripperSub);
+  nh.subscribe(treadmillSub);
   nh.advertise(chatter);
 
   
@@ -65,4 +73,17 @@ void loop()
 { 
   nh.spinOnce();
   delay(1); 
+
+  reading = digitalRead(encoderPin);
+
+  if (reading && switchState){
+    switchState = false;
+    tick_msg.data = "ping";
+    chatter.publish(&tick_msg);
+  }
+  else if(!reading){
+    switchState = true;
+  }
+
+
 } 

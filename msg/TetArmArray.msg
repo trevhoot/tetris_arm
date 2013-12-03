@@ -1,1 +1,1 @@
-int16[] data			# [X, Y, orientation, size]
+int16[] data			# [X, Y, orientation]

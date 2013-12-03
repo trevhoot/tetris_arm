@@ -51,7 +51,7 @@ class ArmWrapper():
 		self.donePub = rospy.Publisher("inPosition", String)
 		self.actuatorPub = rospy.Publisher("actuated", String)
 		self.gripperPub = rospy.Publisher("gripperSize", UInt16)
-		self.gripperSub = rospy.Subscriber("gripperDone", UInt16, self.gripperDone)
+		self.gripperSub = rospy.Subscriber("gripperDone", UInt16, self.up)
 		self.printOut = rospy.Publisher("print", String)
 		print 'set up pubsubs'
 
@@ -122,8 +122,11 @@ class ArmWrapper():
 	def go_home(self):
 		self.goXYTH((100,6000,0,2))
 		
-	def gripperDone(self, data):
+	def up(self, data):
 		self.actuatorPub.publish('Arduino has reported that the gripper is done moving')
+		self.arm.cartesian()
+		self.arm.move_to(self.x, self.y, 0)	# up
+		self.actuatorPub.publish(doneMsg)
 
 def main(args):
 	rospy.init_node('lowlevel', anonymous=True)

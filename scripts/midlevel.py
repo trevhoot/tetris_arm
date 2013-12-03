@@ -106,7 +106,7 @@ class MidLevel():
 		self.piece.toX = x
 
 	def placePiece(self):
-		self.armPub.publish((self.piece.toX,self.pickUpLine,self.piece.toOrientation,self.piece.size))
+		self.armPub.publish((self.piece.toX,self.pickUpLine,self.piece.toOrientation))
 
 	def afterGripper(self, data):
 		s = data.data
@@ -123,14 +123,14 @@ class MidLevel():
 		self.printOut.publish('midlevel.pickPiece: ArmCommand down to lowlevel')
 		x, y, th, size = self.piece.info()
 		if self.moving == 1:
-			self.armPub.publish([x, self.pickUpLine, th, size])
+			self.armPub.publish([x, self.pickUpLine, th])
 		if self.moving == 0:
 			self.armPub.publish(self.piece.info())
 
 	def timingLoop(self, data):			#terrible name; come up with a new one.
 		if data.data == 'stopped':
 			self.inPosition = 1
-			if self.moving = 0:
+			if self.moving == 0:
 				if self.holding == 1:
 					sizeCmd = 2
 				if self.holding == 0:
@@ -180,11 +180,11 @@ class Piece():
 		self.y = 6000
 		self.orientation = 0
 		if letter in [i, l, j]:
-			self.size = 0
+			self.size = 'small'
 		if letter in [o, z, s, t]:
-			self.size = 1
+			self.size = 'big'
 		if letter == 'X':
-			self.size = 3 		#This is a placeholder and it is bad.
+			self.size = 'fake' 		#This is a placeholder and it is bad.
 
 		self.jl_offset = 10		#how much is the com offset by?
 
@@ -230,7 +230,7 @@ class Piece():
 		if self.letter in [l, j]:
 			x, y = self.offset()
 		else: x, y = self.x, self.y
-		return (x, y, self.orientation, self.size)
+		return (x, y, self.orientation)
 
 def main(args):
 	rospy.init_node('midlevel', anonymous=True)
