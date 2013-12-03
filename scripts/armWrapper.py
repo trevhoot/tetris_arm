@@ -51,7 +51,6 @@ class ArmWrapper():
 		self.donePub = rospy.Publisher("inPosition", String)
 		self.actuatorPub = rospy.Publisher("actuated", String)
 		self.gripperPub = rospy.Publisher("gripperSize", String)
-		self.gripperSub = rospy.Subscriber("gripperDone", UInt16, self.gripperDone)
 		self.printOut = rospy.Publisher("print", String)
 		print 'set up pubsubs'
 
@@ -60,7 +59,7 @@ class ArmWrapper():
 	def goXYTH(self, data):
 		if type(data) != tuple:
 			data = data.data
-		self.x, self.y, th, size = data
+		self.x, self.y, th = data
 		z = 0
 		self.printOut.publish("lowlevel: going to x y th size %f %f %f %f" %(self.x, self.y, th, size))
 		if self.y < 2700:

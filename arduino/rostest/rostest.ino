@@ -20,20 +20,20 @@ boolean reading;
 
 void gripperCb( const std_msgs::String& gripperSize){
   data = gripperSize.data;
-  if (data == "open") {
-     gripperServo.write(0);                 
+  if (data == "small") {
+     gripperServo.write(20);                 
      delay(15);
      digitalWrite(13,HIGH);
    }
    
    if (data == "big") {
-     gripperServo.write(95);                  
+     gripperServo.write(70);                  
      delay(15);
      digitalWrite(13,LOW);
    }
     
-   if (data == "small") {
-     gripperServo.write(180);                 
+   if (data == "open") {
+     gripperServo.write(120);                 
      delay(15);
    }
    

@@ -121,7 +121,7 @@ class MidLevel():
 
 	def pickPiece(self):
 		self.printOut.publish('midlevel.pickPiece: ArmCommand down to lowlevel')
-		x, y, th, size = self.piece.info()
+		x, y, th = self.piece.info()
 		if self.moving == 1:
 			self.armPub.publish([x, self.pickUpLine, th])
 		if self.moving == 0:
