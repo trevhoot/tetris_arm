@@ -47,7 +47,7 @@ class ArmWrapper():
 
 		# Set up talkers and listeners
 		self.pieceSub = rospy.Subscriber("armCommand", TetArmArray, self.goXYTH)
-		self.downSub = rospy.Subscriber("downCmd", UInt16, self.down)
+		self.downSub = rospy.Subscriber("downCmd", String, self.down)
 		self.donePub = rospy.Publisher("inPosition", String)
 		self.actuatorPub = rospy.Publisher("actuated", String)
 		self.gripperPub = rospy.Publisher("gripperSize", String)
@@ -57,11 +57,10 @@ class ArmWrapper():
 	
 
 	def goXYTH(self, data):
-		if type(data) != tuple:
-			data = data.data
+		data = data.data
 		self.x, self.y, th = data
 		z = 0
-		self.printOut.publish("lowlevel: going to x y th size %f %f %f %f" %(self.x, self.y, th, size))
+		self.printOut.publish("lowlevel: going to x y th %f %f %f" %(self.x, self.y, th))
 		if self.y < 2700:
 			self.y = 2700
 		if self.y > 7000:
@@ -77,23 +76,23 @@ class ArmWrapper():
 
 	def down(self, data):
 		size = data.data
-		self.printOut.publish("lowlevel.down: I heard %d" %size)
+		self.printOut.publish("lowlevel.down: I heard %s" %size)
 		z = 500
-		if size == 3:
+		if size == 'wait':
 			doneMsg = 'wait'
 			self.size = 0
 			size = 0
 			z = 0
-		if size == 2:			#open
+		if size == 'open':			#open
 			doneMsg = 'released'
 			if self.size == 1:
 				z = -700
 			if self.size == 0:
 				z = -550		
-		if size == 1:
+		if size == 'big':
 			doneMsg = 'grabbed'
 			z = -700
-		if size == 0:
+		if size == 'small':
 			doneMsg = 'grabbed'
 			z = -550
 
