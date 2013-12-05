@@ -20,23 +20,24 @@ boolean reading;
 
 void gripperCb( const std_msgs::String& gripperSize){
   data = gripperSize.data;
-  if (data == "small") {
-     gripperServo.write(20);                 
+  if (data == "open") {
+     gripperServo.write(165);                 
      delay(15);
      digitalWrite(13,HIGH);
    }
    
-   if (data == "big") {
-     gripperServo.write(70);                  
+   if (data == "small") {
+     gripperServo.write(90);                  
      delay(15);
      digitalWrite(13,LOW);
    }
     
-   if (data == "open") {
-     gripperServo.write(120);                 
+   if (data == "big") {
+     gripperServo.write(130);                 
      delay(15);
    }
-   
+   tick_msg.data = "ping";
+   chatter.publish(&tick_msg);
 }
 
 void treadmillCb( const std_msgs::String& motorSpeed){

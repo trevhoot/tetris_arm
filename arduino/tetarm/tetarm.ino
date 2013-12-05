@@ -1,5 +1,6 @@
-
+#include <ros.h>
 #include <Servo.h> 
+#include <std_msgs/UInt16.h>
 
 Servo motor;		// create servo object to control the motor speed
 Servo gripper;  	// create servo object to control a the gripper 
