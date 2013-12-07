@@ -5,6 +5,7 @@ import roslib
 roslib.load_manifest('tetris_arm')
 import sys
 import rospy
+import math
 
 #to subscribe to and publish images
 from std_msgs.msg import String, Bool, UInt16
@@ -32,6 +33,10 @@ class MidLevel():
 		self.pos_maxx = 1700     #1700 acutal tested value
 		self.pos_miny = 5500		#maxy ~ 11500
 
+		# variables for determaning speed of treadmill
+		self.prevTime = int(round(time.time()*1000))
+		self.pastAvg = 0
+		self.distPerTick = (math.pi*44.8)/11       #in mm (how much the treadmill moves)
 
 		# Set up talkers and listeners
 		self.pieceInfoSub = rospy.Subscriber("pieceState", PieceState, self.setPiece)	# piece (x,y,orientation,type) data from camera wrapper
@@ -39,28 +44,52 @@ class MidLevel():
 		self.doneSub = rospy.Subscriber("inPosition", String, self.timingLoop)			# Get when arm is finished moving from low level
 		self.gripperSub = rospy.Subscriber("actuated", String, self.afterGripper)		# Get when gripper is done actuating (and status)
 		self.treadmillSub = rospy.Subscriber("treadmillDone", String, self.afterTreadmill)	# Get when treadmill is done changing
-		self.speedSub = rospy.Subscriber("beltSpeed", String, self.updateThreshold)		
+		self.speedSub = rospy.Subscriber("beltSpeed", String, self.updateThreshold)	
+		self.tick = rospy.Subscriber("encoderTick", String, self.calculateSpeed)	    # Every time magnet passes reed swithc 
 
-		self.armPub = rospy.Publisher("armCommand", TetArmArray)				# x,y,orientation,size
+		self.armPub = rospy.Publisher("armCommand", TetArmArray)				# x,y,orientation
 		self.downPub = rospy.Publisher("downCmd", String)					# drop to pick or place piece of a certain size
 		self.newPiecePub = rospy.Publisher("newPiece", String)					# announce newPiece type to highLevel
 		self.treadmillPub = rospy.Publisher("treadmillMotor", String)
 		self.timingPub = rospy.Publisher("inPosition", String)
+		self.speed = rospy.Publisher("beltSpeed", String)
 
 		self.printOut = rospy.Publisher('print', String)							# debugging
 		#self.calibratePub = rospy.Publisher('calibrate', String)						# debugging
 		self.calibrateSub = rospy.Subscriber("calibrate", String, self.calibrate)
+		self.pickupTimeSub = rospy.Subscriber("pickupTime", UInt16, self.setPickupTime)
+
+
+	def setPickupTime(self,datat):
+		self.pickupTime = data.data
 		
 	def afterTreadmill(self, data):
 		return
+		
+	def calculateSpeed(self, data):
+
+		# Calclate and publish current speed
+		self.time = int(round(time.time()*1000))
+		deltaTime = self.time - self.prevTime
+		self.prevTime = self.time
+		self.speed.publish(str(deltaTime))
+
+		# Calculate Eponential Rolling Average
+		alpha = .98
+		if deltaTime > 400: return
+		if self.pastAvg ==0: self.pastAvg = deltaTime
+		currentAvg = alpha*self.pastAvg + (1-alpha)*deltaTime
+
+		self.speed.publish(str(self.distPerTick/(currentAvg/1000)))
+		self.pastAvg = currentAvg
 
 	def updateThreshold(self, data):
 		speed = data.data
 		if speed == 0:
 			self.moving = 0
 		else: self.moving = 1
-		timeDown = 0.5			#time to actuate gripper
-		self.threshold = self.pickUpLine + speed * timeDown
+		self.threshold = self.pickUpLine + speed * self.pickupTime
+		self.printOut.publish('midlevel.updateThreshold: treshold is %s' %str(self.threshold))
 		
 
 	def calibrate(self, data):
