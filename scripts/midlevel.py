@@ -42,7 +42,7 @@ class MidLevel():
 		self.speedSub = rospy.Subscriber("beltSpeed", String, self.updateThreshold)		
 
 		self.armPub = rospy.Publisher("armCommand", TetArmArray)				# x,y,orientation,size
-		self.downPub = rospy.Publisher("downCmd", UInt16)					# drop to pick or place piece of a certain size
+		self.downPub = rospy.Publisher("downCmd", String)					# drop to pick or place piece of a certain size
 		self.newPiecePub = rospy.Publisher("newPiece", String)					# announce newPiece type to highLevel
 		self.treadmillPub = rospy.Publisher("treadmillMotor", String)
 		self.timingPub = rospy.Publisher("inPosition", String)
@@ -120,8 +120,8 @@ class MidLevel():
 			pass
 
 	def pickPiece(self):
-		self.printOut.publish('midlevel.pickPiece: ArmCommand down to lowlevel')
 		x, y, th = self.piece.info()
+		self.printOut.publish('midlevel.pickPiece: ArmCommand down to lowlevel %f %f %f' %(x, y, th))
 		if self.moving == 1:
 			self.armPub.publish([x, self.pickUpLine, th])
 		if self.moving == 0:
@@ -132,11 +132,11 @@ class MidLevel():
 			self.inPosition = 1
 			if self.moving == 0:
 				if self.holding == 1:
-					sizeCmd = 2
+					sizeCmd = "open"
 				if self.holding == 0:
 					sizeCmd = self.piece.size
 				self.downPub.publish(sizeCmd)
-				self.printOut.publish('midlevel.timingLoop: the arm is in position! sending %f' %sizeCmd)
+				self.printOut.publish('midlevel.timingLoop: the arm is in position! sending %s' %sizeCmd)
 			return
 			self.treadmillPub.publish(self.speed)
 
@@ -144,17 +144,17 @@ class MidLevel():
 			if self.inPosition == 1:
 				self.inPosition = 0
 				if self.holding == 1:
-					sizeCmd = 2
+					sizeCmd = 'open'
 				if self.holding == 0:
 					sizeCmd = self.piece.size
 				self.downPub.publish(sizeCmd)
-				self.printOut.publish('midlevel.timingLoop: the time is right! sending %f' %sizeCmd)
+				self.printOut.publish('midlevel.timingLoop: the time is right! sending %s' %sizeCmd)
 			else: 
 				return
 				self.treadmillPub.publish(0)     #stop the motor
 
 	def goHome(self):
-		self.armPub.publish((3000,3000,0,3))
+		self.armPub.publish((3000,3000,0))
 		self.piece = Piece()
 
 	def pixtopos(self, pix_x, pix_y):
