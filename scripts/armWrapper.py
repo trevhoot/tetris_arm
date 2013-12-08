@@ -78,16 +78,16 @@ class ArmWrapper():
 		size = data.data
 		self.printOut.publish("lowlevel.down: I heard %s" %size)
 		z = 500
-		if size == 'wait':
+		if size == 'fake':
 			doneMsg = 'wait'
-			self.size = 0
-			size = 0
+			self.size = 'open'
+			size = 'open'
 			z = 0
 		if size == 'open':			#open
 			doneMsg = 'released'
-			if self.size == 1:
+			if self.size == 'big':
 				z = -700
-			if self.size == 0:
+			if self.size == 'small':
 				z = -550		
 		if size == 'big':
 			doneMsg = 'grabbed'
@@ -99,9 +99,9 @@ class ArmWrapper():
 		#2 IS WRONG, FIX ME
 		self.arm.cartesian()
 		self.arm.move_to(self.x, self.y, z)	# down
-		self.gripper(size)			# grab it
+		self.gripperPub.publish(size)		# grab it
 		self.size = size
-		time.sleep(1.5)				# give time to pick up piece! TODO (if you can rad from servo, make self.up)
+		time.sleep(1.5)				# give time to pick up piece! TODO (if you can read from servo, make self.up)
 		self.arm.cartesian()
 		self.arm.move_to(self.x, self.y, 0)	# up
 		self.actuatorPub.publish(doneMsg)

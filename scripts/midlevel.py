@@ -26,7 +26,8 @@ class MidLevel():
 
 		self.threshold = 100000   			# bogus y value that will be reset when the piece is moving TODO
 		self.speed = 0		 			# default value: treadmill isn't moving.
-		self.pickUpLine = 6000
+		self.pickupLine = 6000
+		self.pickupTime = 0
 
 		# used to calibrate image to arm
 		self.pos_minx = -1500    #-1500 actual tested value
@@ -44,7 +45,7 @@ class MidLevel():
 		self.doneSub = rospy.Subscriber("inPosition", String, self.timingLoop)			# Get when arm is finished moving from low level
 		self.gripperSub = rospy.Subscriber("actuated", String, self.afterGripper)		# Get when gripper is done actuating (and status)
 		self.treadmillSub = rospy.Subscriber("treadmillDone", String, self.afterTreadmill)	# Get when treadmill is done changing
-		self.speedSub = rospy.Subscriber("beltSpeed", String, self.updateThreshold)	
+		self.speedSub = rospy.Subscriber("beltSpeed", UInt16, self.updateThreshold)	
 		self.tick = rospy.Subscriber("encoderTick", String, self.calculateSpeed)	    # Every time magnet passes reed swithc 
 
 		self.armPub = rospy.Publisher("armCommand", TetArmArray)				# x,y,orientation
@@ -52,7 +53,7 @@ class MidLevel():
 		self.newPiecePub = rospy.Publisher("newPiece", String)					# announce newPiece type to highLevel
 		self.treadmillPub = rospy.Publisher("treadmillMotor", String)
 		self.timingPub = rospy.Publisher("inPosition", String)
-		self.speed = rospy.Publisher("beltSpeed", String)
+		self.speedPub = rospy.Publisher("beltSpeed", UInt16)
 
 		self.printOut = rospy.Publisher('print', String)							# debugging
 		#self.calibratePub = rospy.Publisher('calibrate', String)						# debugging
@@ -72,7 +73,6 @@ class MidLevel():
 		self.time = int(round(time.time()*1000))
 		deltaTime = self.time - self.prevTime
 		self.prevTime = self.time
-		self.speed.publish(str(deltaTime))
 
 		# Calculate Eponential Rolling Average
 		alpha = .98
@@ -80,7 +80,7 @@ class MidLevel():
 		if self.pastAvg ==0: self.pastAvg = deltaTime
 		currentAvg = alpha*self.pastAvg + (1-alpha)*deltaTime
 
-		self.speed.publish(str(self.distPerTick/(currentAvg/1000)))
+		self.speedPub.publish(self.distPerTick/(currentAvg/1000))
 		self.pastAvg = currentAvg
 
 	def updateThreshold(self, data):
@@ -88,7 +88,7 @@ class MidLevel():
 		if speed == 0:
 			self.moving = 0
 		else: self.moving = 1
-		self.threshold = self.pickUpLine + speed * self.pickupTime
+		self.threshold = self.pickupLine + speed * self.pickupTime
 		self.printOut.publish('midlevel.updateThreshold: treshold is %s' %str(self.threshold))
 		
 
@@ -135,7 +135,7 @@ class MidLevel():
 		self.piece.toX = x
 
 	def placePiece(self):
-		self.armPub.publish((self.piece.toX,self.pickUpLine,self.piece.toOrientation))
+		self.armPub.publish((self.piece.toX,self.pickupLine,self.piece.toOrientation))
 
 	def afterGripper(self, data):
 		s = data.data
@@ -146,13 +146,15 @@ class MidLevel():
 			self.holding = 1
 			self.placePiece()
 		elif s == 'wait':
-			pass
+			self.holding = 0
+		self.printOut.publish('midlevel.afterGripper: %s; holding = %f' %(s, self.holding))
+		
 
 	def pickPiece(self):
 		x, y, th = self.piece.info()
 		self.printOut.publish('midlevel.pickPiece: ArmCommand down to lowlevel %f %f %f' %(x, y, th))
 		if self.moving == 1:
-			self.armPub.publish([x, self.pickUpLine, th])
+			self.armPub.publish([x, self.pickupLine, th])
 		if self.moving == 0:
 			self.armPub.publish(self.piece.info())
 
