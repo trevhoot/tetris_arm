@@ -110,82 +110,84 @@ class MidLevel():
 			self.timingPub.publish("now")
 
 		if letter != self.piece.letter:			#new piece --OR WATCH FOR FALSE POSITIVES!
-			self.printOut.publish('midlevel.pieceType: NEW LETTER. Instantiate new piece, then pickPiece')
 			self.piece = Piece(letter)
+			self.printOut.publish('midlevel.pieceType: Recieved /pieceState %s' %letter)
 			self.newPiecePub.publish(String(letter))
 			self.piece.set_xyth(x, y, th)
 			self.pickPiece()
 		return
-		#the following is the "puppy behavior" but it sends commands too quickly!
-		if (abs(x - self.piece.info()[0]) < 50 and abs(y - self.piece.info()[1]) < 50):
-			pass #self.printOut.publish('midlevel.setPiece: no movement')
-		else:
-			self.piece.set_xyth(x, y, th)
-			self.printOut.publish('midlevel.setPiece: set piece data to %s because of %s' %(str(self.piece.info()), str(data.data)))
-			time.sleep(0.5)		#delay for debugging
-			self.pickPiece()
-
 		
 	def setPiecePlacement(self, data):
 		orientation, index = data.data
-		print 'command from high level:', orientation, index
-		x = int(index*300.-1400)  #maps [0 to 10] to [-1400 to 1600]
-		self.printOut.publish('midlevel.setPiecePlacement: set (x, orientation) to (%d, %d)' %(x, orientation))
+		x = int(index*(self.pos_maxx - self.pos_minx)/10.+self.pos_minx)  #maps [0 to 10] to [pos_minx to pos_maxx]
+		self.printOut.publish('midlevel.setPiecePlacement: Received /DownCommand, set piece To-Data to %d, %d' %(x, orientation))
 		self.piece.toOrientation = orientation
 		self.piece.toX = x
 
 	def placePiece(self):
+		self.printOut.publish('midlevel.placePiece: Sending %d, %d, %d' %(self.piece.toX, self.pickupLine,self.piece.toOrientation))
 		self.armPub.publish((self.piece.toX,self.pickupLine,self.piece.toOrientation))
 
 	def afterGripper(self, data):
 		s = data.data
 		if s == 'released':
-			self.goHome()
 			self.holding = 0
+			self.printOut.publish('midlevel.afterGripper: Recieved /actuated %s, Holding = %f' %(s, self.holding))
+			self.goHome()
 		elif s == 'grabbed':
 			self.holding = 1
+			self.printOut.publish('midlevel.afterGripper: Recieved /actuated %s, Holding = %f' %(s, self.holding))
 			self.placePiece()
 		elif s == 'wait':
 			self.holding = 0
-		self.printOut.publish('midlevel.afterGripper: %s; holding = %f' %(s, self.holding))
+			self.printOut.publish('midlevel.afterGripper: Recieved /actuated %s, Holding = %f' %(s, self.holding))
 		
 
 	def pickPiece(self):
 		x, y, th = self.piece.info()
-		self.printOut.publish('midlevel.pickPiece: ArmCommand down to lowlevel %f %f %f' %(x, y, th))
+		#self.printOut.publish('midlevel.pickPiece: /armCommand %f %f %f' %(x, y, th))
 		if self.moving == 1:
+			self.printOut.publish('midlevel.pickPiece: Sending /armCommand %f, %f, %f moving = 1' %(x, self.pickupLine, th))
 			self.armPub.publish([x, self.pickupLine, th])
 		if self.moving == 0:
+			self.printOut.publish('midlevel.pickPiece: Sending /armCommand %f, %f, %f moving = 0' %(x, y, th))
 			self.armPub.publish(self.piece.info())
 
 	def timingLoop(self, data):			#terrible name; come up with a new one.
+		self.printOut.publish('midlevel.timingLoop: Recieved /inPosition %s' %data.data)
 		if data.data == 'stopped':
 			self.inPosition = 1
+			self.printOut.publish('midlevel.timingLoop: Set self.inPosition = 1')
 			if self.moving == 0:
 				if self.holding == 1:
 					sizeCmd = "open"
 				if self.holding == 0:
 					sizeCmd = self.piece.size
 				self.downPub.publish(sizeCmd)
-				self.printOut.publish('midlevel.timingLoop: the arm is in position! sending %s' %sizeCmd)
+				self.printOut.publish('midlevel.timingLoop: Sending /downCmd %s' %sizeCmd)
 			return
 			self.treadmillPub.publish(self.speed)
+			self.printOut.publish('midlevel.timingLoop: Sending /treadmillMotor %s' %self.speed)
 
 		if data.data == 'now':
 			if self.inPosition == 1:
 				self.inPosition = 0
+				self.printOut.publish('midlevel.timingLoop: Set self.inPosition = 0 (flag lowered)')
 				if self.holding == 1:
 					sizeCmd = 'open'
 				if self.holding == 0:
 					sizeCmd = self.piece.size
+				self.printOut.publish('midlevel.timingLoop: Sending /downCmd %s' %(sizeCmd))
 				self.downPub.publish(sizeCmd)
-				self.printOut.publish('midlevel.timingLoop: the time is right! sending %s' %sizeCmd)
 			else: 
 				return
 				self.treadmillPub.publish(0)     #stop the motor
+				self.printOut.publish('midlevel.timingLoop: Sending /treadmillMotor 0')
 
 	def goHome(self):
+		self.printOut.publish('midlevel.goHome: Sending /armCommand 3000, 3000, 0')
 		self.armPub.publish((3000,3000,0))
+		self.printOut.publish('midlevel.goHome: New dummyPiece')
 		self.piece = Piece()
 
 	def pixtopos(self, pix_x, pix_y):
