@@ -17,7 +17,7 @@ class Calculator():
 		self.prevTime = int(round(time.time()*1000))
 		self.pastAvg = 0
 		self.distPerTick = (math.pi*1.7)/11
-		self.speed = rospy.Publisher("Speed", String)
+		self.speed = rospy.Publisher("beltSpeed", String)
 
 	def currentTime(self):
 

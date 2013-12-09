@@ -47,12 +47,19 @@ class ArmWrapper():
 		self.x = 100
 		self.y = 6000
 		self.arm.move_to(self.x, self.y, 0)
+
+		# start hand and wrist at the right angle
 		self.arm.rotate_hand(1800)
+		self.gripperOrientation = 0
+		self.arm.rotate_wrist(1200)   #vertical	
 		self.arm.lock_wrist_angle()
-		self.rotate_gripper(1)		#start gripper vertical
+
+		# start gripper open
 		self.size = 'open'
-		self.gripperPub.publish(self.size)		#start gripper open
-		self.arm.move_to(3000,3000,0)	#wait off the board
+		self.gripperPub.publish(self.size)
+
+		# wait off the board
+		self.arm.move_to(3000,3000,0)	
 
 
 	
@@ -67,9 +74,7 @@ class ArmWrapper():
 		if self.y > 7000:
 			self.y = 7000
 		self.arm.move_to(self.x,self.y,z)
-		self.arm.check_if_done()
 		self.rotate_gripper(th)
-		self.arm.check_if_done()
 		self.printOut.publish('lowlevel: sending /inPosition "Stopped"')
 		self.donePub.publish("stopped")
 
@@ -107,9 +112,19 @@ class ArmWrapper():
 
 	def rotate_gripper(self, orientation):
 		if orientation == 1:		# vertical
-			self.arm.rotate_wrist(1200)
+			if self.gripperOrientation == 1:
+				pass
+			else: 
+				self.arm.rotate_wrist_rel(-3000)
+				self.gripperOrientation = 1
+				self.arm.lock_wrist_angle()
 		if orientation == 0:		# horizontal
-			self.arm.rotate_wrist(4000)
+			if self.gripperOrientation == 0:
+				pass
+			else:
+				self.arm.rotate_wrist_rel(3000)
+				self.gripperOrientation = 0
+				self.arm.lock_wrist_angle()
 
 def main(args):
 	rospy.init_node('lowlevel', anonymous=True)

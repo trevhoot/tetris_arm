@@ -154,29 +154,28 @@ class MidLevel():
 			self.armPub.publish(self.piece.info())
 
 	def timingLoop(self, data):			#terrible name; come up with a new one.
-		self.printOut.publish('midlevel.timingLoop: Recieved /inPosition %s' %data.data)
 		if data.data == 'stopped':
+			self.printOut.publish('midlevel.timingLoop: Recieved /inPosition %s' %data.data)
 			self.inPosition = 1
 			self.printOut.publish('midlevel.timingLoop: Set self.inPosition = 1')
+			if self.holding == 1:
+				self.timingPub.publish("now")
 			if self.moving == 0:
-				if self.holding == 1:
-					sizeCmd = "open"
-				if self.holding == 0:
-					sizeCmd = self.piece.size
-				self.downPub.publish(sizeCmd)
-				self.printOut.publish('midlevel.timingLoop: Sending /downCmd %s' %sizeCmd)
+				self.timingPub.publish("now")
 			return
 			self.treadmillPub.publish(self.speed)
 			self.printOut.publish('midlevel.timingLoop: Sending /treadmillMotor %s' %self.speed)
 
 		if data.data == 'now':
+			if self.moving == 1:
+				self.printOut.publish('midlevel.timingLoop: Recieved /inPosition %s' %data.data)
 			if self.inPosition == 1:
 				self.inPosition = 0
 				self.printOut.publish('midlevel.timingLoop: Set self.inPosition = 0 (flag lowered)')
-				if self.holding == 1:
-					sizeCmd = 'open'
 				if self.holding == 0:
 					sizeCmd = self.piece.size
+				if self.holding == 1:
+					sizeCmd = 'open'
 				self.printOut.publish('midlevel.timingLoop: Sending /downCmd %s' %(sizeCmd))
 				self.downPub.publish(sizeCmd)
 			else: 

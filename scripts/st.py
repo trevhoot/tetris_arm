@@ -146,7 +146,8 @@ class StArm():
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
 
-    def block_on_result(self, cmd, debug=False):        
+    def block_on_result(self, cmd, debug=False):   
+             
         try:
             s = self.cxn.read(self.cxn.inWaiting())
             res = re.search(OK, s).group(0)
