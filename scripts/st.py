@@ -211,6 +211,7 @@ class StArm():
         if debug:
             print('Moving to cartesian coords: (' + str(x) + ', ' +
                   str(y) + ', ' + str(z) + ')')
+        self.cartesian()
         self.cxn.flushInput()
         self.cxn.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO' + CR)
         if block:

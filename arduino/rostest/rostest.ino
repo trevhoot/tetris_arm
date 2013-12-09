@@ -11,8 +11,10 @@ String data = String("Hello");
 
 std_msgs::String tick_msg;
 std_msgs::String gripper_msg;
+std_msgs::String print_msg;
 ros::Publisher chatter("encoderTick", &tick_msg);
 ros::Publisher gripperPub("actuated", &gripper_msg);
+ros::Publisher printOut("print", &print_msg);
 
 int encoderPin = 2;
 boolean switchState = false;
@@ -20,20 +22,28 @@ boolean reading;
 
 void gripperCb( const std_msgs::String& gripperSize){
   data = gripperSize.data;
+  printOut.publish(&print_msg);
   if (data == "open") {
+     print_msg.data = "adruino.gripperCb: recieved /gripperSize open";
+     printOut.publish(&print_msg);
      gripperServo.write(165);                 
      delay(15);
      digitalWrite(13,HIGH);
    }
    
    if (data == "small") {
+     print_msg.data = "adruino.gripperCb: recieved /gripperSize small";
+     printOut.publish(&print_msg);
      gripperServo.write(90);                  
      delay(15);
      digitalWrite(13,LOW);
    }
     
    if (data == "big") {
-     gripperServo.write(130);                 
+     print_msg.data = "adruino.gripperCb: recieved /gripperSize big";
+     printOut.publish(&print_msg);
+     printOut.publish(&print_msg);
+     gripperServo.write(125);                 
      delay(15);
    }
    tick_msg.data = "ping";
@@ -62,10 +72,12 @@ void setup()
 { 
   tread.attach(9);
   gripperServo.attach(8); 
+  gripperServo.write(165);  
   nh.initNode();
   nh.subscribe(gripperSub);
   nh.subscribe(treadmillSub);
   nh.advertise(chatter);
+  nh.advertise(printOut);
 
   
 } 
