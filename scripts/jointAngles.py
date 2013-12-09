@@ -10,21 +10,21 @@ def jointAngles(x,y,z):
     returns: list of angles (degrees)
     """
     #Converts from arm tics to mm
-    x = tic_to_mm(x)
-    y = tic_to_mm(y)
-    z = tic_to_mm(z)
+    x = ticToMm(x)
+    y = ticToMm(y)
+    z = ticToMm(z)
     
 
     a = sqrt(x**2 + y**2)
     b = sqrt(a**2 + z**2)
-    print b
+#    print b
     phi = atan2(z,a)
     psy = atan2(a,z)
     theta3 = acos(2 - b**2/375**2)
     chi = (pi - theta3)/2
-    print phi*(180/pi)
-    print psy*(180/pi)
-    print chi*(180/pi)
+#    print phi*(180/pi)
+ #   print psy*(180/pi)
+  #  print chi*(180/pi)
 
     theta3 = theta3*(180/pi) #Elbow
     theta1 = atan(x/y)*(180/pi) #Base
@@ -33,8 +33,11 @@ def jointAngles(x,y,z):
 
     return [theta1,theta2,theta3,theta4]
 
-def tic_to_mm(coord):
+def ticToMm(coord):
     return coord*(355.6/3630)
+
+def mmToTic(coord):
+    return coord*(3630/355.6)
 
 def main():
     print jointAngles(0,6000,100)
