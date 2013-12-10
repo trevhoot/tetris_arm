@@ -32,7 +32,7 @@ class MidLevel():
 		# used to calibrate image to arm
 		self.pos_minx = -1500    #-1500 actual tested value
 		self.pos_maxx = 1700     #1700 acutal tested value
-		self.pos_miny = 5500		#maxy ~ 11500
+		self.pos_miny = 5300		#maxy ~ 11500
 
 		# variables for determaning speed of treadmill
 		self.prevTime = int(round(time.time()*1000))
@@ -154,6 +154,9 @@ class MidLevel():
 			self.armPub.publish(self.piece.info())
 
 	def timingLoop(self, data):			#terrible name; come up with a new one.
+		if self.piece.letter == 'X':
+			self.printOut.publish("midlevel.timingLoop: piece is an X, I don't care.")
+			return
 		if data.data == 'stopped':
 			self.printOut.publish('midlevel.timingLoop: Recieved /inPosition %s' %data.data)
 			self.inPosition = 1
