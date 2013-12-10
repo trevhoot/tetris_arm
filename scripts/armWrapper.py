@@ -25,7 +25,7 @@ class ArmWrapper():
 		print 'set up pubsubs'
 
 		if arm == 0:
-			self.arm = st.StArm(dev = '/dev/ttyUSB1', init = False, to = 0.1)
+			self.arm = st.StArm(dev = '/dev/ttyUSB0', init = False, to = 0.1)
 			self.arm.start()
 		else: self.arm = arm
 

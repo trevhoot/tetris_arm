@@ -17,14 +17,14 @@ i, l, j, o, z, s, t = 'I', 'L', 'J', 'O', 'Z', 'S', 'T'
 class MidLevel():
 	def __init__(self):
 		
-		dummyPiece = Piece()				# initializes first piece as x to detect change
+		dummyPiece = Piece()				# initializes first piece as X to detect change
 		self.piece = dummyPiece
 		self.letterList = [i, l, j, o, z, s, t]		# letter seen by camera comes in as an index in this list
 		self.holding = 0				# toggle when pick/place piece
 		self.moving = 0					# toggle when treadmill is moving/not moving	TODO
 		self.inPosition = 0				# toggle when arm is in position or not
 
-		self.threshold = 100000   			# bogus y value that will be reset when the piece is moving TODO
+		self.threshold = 100000   			# bogus y value that will be reset when the piece is moving
 		self.speed = 0		 			# default value: treadmill isn't moving.
 		self.pickupLine = 6000
 		self.pickupTime = 0
@@ -61,7 +61,7 @@ class MidLevel():
 		self.pickupTimeSub = rospy.Subscriber("pickupTime", UInt16, self.setPickupTime)
 
 
-	def setPickupTime(self,datat):
+	def setPickupTime(self,data):
 		self.pickupTime = data.data
 		
 	def afterTreadmill(self, data):
@@ -232,9 +232,9 @@ class Piece():
 		self.y = y
 		self.th = th
 		if th == 90 or th == 270:	#horizontal?
-			self.orientation = 0		#arm horizontal
+			self.orientation = 1		#arm horizontal
 		elif th == 0 or th == 180:	#vertical?
-			self.orientation = 1		#arm vertical
+			self.orientation = 0		#arm vertical
 
 	def offset(self):
 		x, y = self.x, self.y
