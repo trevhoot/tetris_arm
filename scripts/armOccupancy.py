@@ -31,8 +31,14 @@ def armSpace(x1,y1,z1,x2,y2,z2):
     pos1 = armLocation(length1,theta1,[x1,y1])
     pos2 = armLocation(length2,theta2,[x2,y2])
 
-    buildWorkspace(pos1, pos2)
-    plt.show()
+    if theta1 == theta2:
+        return pos1
+    elif theta1 < theta2:
+        return buildWorkspace(pos1, pos2)
+    elif theta1 > theta2:
+        return buildWorkspace(pos2, pos1)
+
+    
 
 def armLocation(length, theta, position = [0,0]):
     """Finds location of the arm in space relative to the base.
@@ -58,54 +64,27 @@ def armLocation(length, theta, position = [0,0]):
     plt.axis([-700, 700, -200, 700])
 
 
-    return [p1, p2, p3, p4, theta]
+    return [p1, p2, p3, p4]
 
-def buildWorkspace(start,end):
-    if start[4] == end[4]:
-        return start[0:3]
-    elif start[4] > end[4]: #Moving counter-clockwise
-        xpoints = [start[0][0], start[1][0], end[2][0], end[3][0], top[0]]
-        ypoints = [start[0][1], start[1][1], end[2][1], end[3][1], top[1]]
-        workArea = [start[0], start[1], end[2], end[3]]
-        top = appendOuter(workArea,[end[0], start[3]])
+def buildWorkspace(start, end):
+    workArea = [end[0], end[1], start[2], start[3]]
+    checkPoints = [start[0], end[0], end[3]]
+    startint = 0
+    endint = 3
+    xpoints = [end[0][0], end[1][0], start[2][0], start[3][0]]
+    ypoints = [end[0][1], end[1][1], start[2][1], start[3][1]]
+    while workArea[0] != workArea[-1] and len(workArea) < 8:
+        print len(workArea)
+        top = appendOuter(workArea, checkPoints)
         workArea.append(top)
-    elif start[4] < end[4]: #Moving clockwise
-        start.pop()
-        end.pop()
-        workArea = [end[0], end[1], start[2], start[3]]
-        checkPoints = [start[0], end[3]]
-        startint = 0
-        endint = 3
-        while workArea[0] != workArea[-1] and len(workArea) < 8:
-            print workArea
-            top = appendOuter(workArea, checkPoints)
-            workArea.append(top)
+        xpoints.append(top[0])
+        ypoints.append(top[1])
         
-            topInd = checkPoints.index(top)
-            checkPoints.remove(top)
-            if top == start[startint]:
-                startint += 1
-                try:
-                    checkPoints.append(start[startint])
-                    print 'start int', start[startint]
-                except:
-                    checkPoints.append(start[0])
-                    print 'start 0', start[0]
-            elif True:#top == end[endint]:
-                print 'int', endint
-                print 'len', len(end)
-                endint += 1
-                try:
-                    checkPoints.append(end[endint])
-                    print 'end int', end[endint]
-                except:
-                    checkPoints.append(end[0])
-                    endint = 0
-                    print 'end 0', end[0]
-
-        xpoints = [end[0][0], end[1][0], start[2][0], start[3][0], top[0]]
-        ypoints = [end[0][1], end[1][1], start[2][1], start[3][1], top[1]]
+        checkPoints.remove(top)
+        
     plt.plot(xpoints,ypoints)
+    plt.show()
+    return workArea
         
 def appendOuter(workArea, points):
     """
@@ -125,7 +104,8 @@ def appendOuter(workArea, points):
         ang = acos((a**2+b**2-h**2)/(2*a*b))
         
         angles[ang] = point
-    
+    print 'ang', angles
+    print ''
     return angles[max(angles)]
 
 
@@ -135,7 +115,7 @@ def lineLength(p1,p2):
     return sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
 
 def main():
-    armSpace(0,6000,0,2000,6000,0)
+    armSpace(-1000,5000,0,-4000,4000,0)
 
 if __name__ == '__main__':
     main()
