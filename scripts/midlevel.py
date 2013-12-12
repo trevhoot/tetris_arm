@@ -30,9 +30,9 @@ class MidLevel():
 		self.pickupTime = 0
 
 		# used to calibrate image to arm
-		self.pos_minx = -1500    #-1500 actual tested value
-		self.pos_maxx = 1700     #1700 acutal tested value
-		self.pos_miny = 5300		#maxy ~ 11500
+		self.pos_minx = -1490 #-1550    #-1500 actual tested value
+		self.pos_maxx = 2050     #1700 acutal tested value
+		self.pos_miny = 5470#5450		#maxy ~ 11500
 
 		# variables for determaning speed of treadmill
 		self.prevTime = int(round(time.time()*1000))
@@ -93,11 +93,11 @@ class MidLevel():
 		
 
 	def calibrate(self, data):
-		minx, maxx, miny = list(data.data)
-		self.printOut.publish(str(minx, maxx, miny))
-		self.pos_minx = minx
-		self.pos_maxx = maxx
-		self.pos_miny = miny
+		maxx, minx, miny = data.data.split(' ')
+		self.printOut.publish('%s, %s, %s' %(minx, maxx, miny))
+		self.pos_minx = int(minx)
+		self.pos_maxx = int(maxx)
+		self.pos_miny = int(miny)
 
 	def setPiece(self, data):
 		#self.printOut.publish('midlevel: piece is %s' %self.piece)
@@ -105,7 +105,8 @@ class MidLevel():
 		pix_x, pix_y, th, letterindex = data.data
 		letter = self.letterList[letterindex]
 		x, y = self.pixtopos(pix_x, pix_y)
-
+		self.printOut.publish('---------------------LOOK AT ME-----------------')
+		self.printOut.publish('midlevel.setPiece: piece angle is %s' %str(th))
 		if y < self.threshold:
 			self.timingPub.publish("now")
 
@@ -119,7 +120,8 @@ class MidLevel():
 		
 	def setPiecePlacement(self, data):
 		orientation, index = data.data
-		x = int(index*(self.pos_maxx - self.pos_minx)/10.+self.pos_minx)  #maps [0 to 10] to [pos_minx to pos_maxx]
+		beltWidth = self.pos_maxx - self.pos_minx
+		x = int((index+0.5)*(beltWidth/10.)+self.pos_minx) #maps [0 to 10] to [pos_minx to pos_maxx]
 		self.printOut.publish('midlevel.setPiecePlacement: Received /DownCommand, set piece To-Data to %d, %d' %(x, orientation))
 		self.piece.toOrientation = orientation
 		self.piece.toX = x
@@ -219,9 +221,7 @@ class Piece():
 		if letter in [o, z, s, t]:
 			self.size = 'big'
 		if letter == 'X':
-			self.size = 'fake' 		#This is a placeholder and it is bad.
-
-		self.jl_offset = 10		#how much is the com offset by?
+			self.size = 'fake' 		#This is a placeholder, and it is bad.
 
 	def __repr__(self):
 		return self.letter
@@ -231,41 +231,42 @@ class Piece():
 		self.x = x
 		self.y = y
 		self.th = th
+		jl_offset = 140          #needs to be grabbed off center along hot-dog fold
+		jl_COMoffset = 140        #needs to go away from bottom-heavy COG
+
+		if self.letter == j:
+			if th == 0:
+					self.y = y + jl_offset
+					self.x = x - jl_COMoffset
+			if th == 90:
+					self.x = x - jl_offset
+					self.y = y + jl_COMoffset
+			if th == 180:
+					self.y = y - jl_offset
+					self.x = x + jl_COMoffset
+			if th == 270:
+					self.x = x + jl_offset
+					self.y = y - jl_COMoffset
+		if self.letter == l:
+			if th == 0:
+					self.x = x - jl_COMoffset
+					self.y = y - jl_offset
+			if th == 90:
+					self.x = x - jl_offset
+					self.y = y + jl_COMoffset
+			if th == 180:
+					self.x = x + jl_COMoffset
+					self.y = y + jl_offset
+			if th == 270:
+					self.x = x + jl_offset
+					self.y = y - jl_COMoffset
 		if th == 90 or th == 270:	#horizontal?
-			self.orientation = 0		#arm horizontal
+			self.orientation = 1		#arm horizontal
 		elif th == 0 or th == 180:	#vertical?
-			self.orientation = 1		#arm vertical
-
-	def offset(self):
-		x, y = self.x, self.y
-		if self.orientation == 0:			#upright
-			if self.letter == l:
-				x = self.x - self.jl_offset
-			if self.letter == j:
-				x = self.x + self.jl_offset
-		if self.orientation == 1:			#rotated right
-			if self.letter == l:
-				y = self.y + self.jl_offset
-			if self.letter == j:
-				y = self.y - self.jl_offset
-		if self.orientation == 2:			#upside-down
-			if self.letter == l:
-				x = self.x + self.jl_offset
-			if self.letter == j:
-				x = self.x - self.jl_offset
-		if self.orientation == 3:
-			if self.letter == l:
-				y = self.x - self.jl_offset
-			if self.letter == j:
-				y = self.x + self.jl_offset
-		return x, y
-
+			self.orientation = 0		#arm vertical
 
 	def info(self):
-		if self.letter in [l, j]:
-			x, y = self.offset()
-		else: x, y = self.x, self.y
-		return (x, y, self.orientation)
+		return (self.x, self.y, self.orientation)
 
 def main(args):
 	rospy.init_node('midlevel', anonymous=True)

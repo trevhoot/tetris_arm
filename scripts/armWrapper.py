@@ -25,7 +25,10 @@ class ArmWrapper():
 		print 'set up pubsubs'
 
 		if arm == 0:
-			self.arm = st.StArm(dev = '/dev/ttyUSB1', init = False, to = 0.1)
+			try:
+				self.arm = st.StArm(dev = '/dev/ttyUSB1', init = False, to = 0.1)
+			except:
+				self.arm = st.StArm(dev = '/dev/ttyUSB0', init = False, to = 0.1)
 			self.arm.start()
 		else: self.arm = arm
 
@@ -51,7 +54,7 @@ class ArmWrapper():
 		# start hand and wrist at the right angle
 		self.arm.rotate_hand(1800)
 		self.gripperOrientation = 0
-		self.arm.rotate_wrist(1200)   #vertical	
+		self.arm.rotate_wrist(1000)   #vertical	
 		self.arm.lock_wrist_angle()
 
 		# start gripper open
@@ -134,7 +137,6 @@ def main(args):
 		rospy.spin()
 	except KeyboardInterrupt:
 		print "Shutting down"
-
 
 if __name__ == '__main__':
     main(sys.argv)

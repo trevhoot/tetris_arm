@@ -62,7 +62,7 @@ class image_converter:
       print e
 
 	  #parse out location RIO (the treadmill area)
-    crop_image = cv_image[68:243,230:515]
+    crop_image = cv_image[77:243,230:515]
 
     templatex=60
     templatey =80

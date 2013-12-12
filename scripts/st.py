@@ -3,7 +3,7 @@ import re
 import shlex
 
 # Use this one for Mac/Linux
-DEFAULT_DEV = '/dev/tty.KeySerial1'
+# DEFAULT_DEV = '/dev/tty.KeySerial1'
 
 # Use this one for PC
 DEFAULT_DEV = '/dev/ttyUSB0'

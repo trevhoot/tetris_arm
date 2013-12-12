@@ -21,19 +21,22 @@ class DeterminePiece:
     templatey=80
 
     def __init__(self, letter):
-	self.letter = letter
-	letterList = ['I', 'L', 'J', 'O', 'Z', 'S', 'T']
-	self.letterIndex = letterList.index(self.letter)
+        self.letter = letter
+        letterList = ['I', 'L', 'J', 'O', 'Z', 'S', 'T']
+        allTemplatesNames = []
+        self.letterIndex = letterList.index(self.letter)
         rospy.init_node('identify_%s'%self.letter, anonymous=True)
 
-        self.templatesNames = os.listdir("../templates")
-        for template in self.templatesNames:
+        allTemplatesNames = os.listdir("../templates")
+        for template in allTemplatesNames:
             if (template != "Field.jpg" and template[0] == self.letter):
                 templateImage = cv2.imread("../templates/%s" %template, 2)
                 self.templateImages.append(templateImage)
+                self.templatesNames.append(template)
 
         #intiates publishers for piece information
         self.pieceState_pub = rospy.Publisher("pieceState", PieceState)
+        self.printOut = rospy.Publisher('print', String)
 
         self.bridge = CvBridge()
 
@@ -55,32 +58,35 @@ class DeterminePiece:
     def IterateThroughTemplates(self, field):
         pieces = []
         i = 0
+        matchDegree = []
+        matchLocation = []
         for template in self.templateImages:
             pieceInfo = []
             if (template != None):
-                matchLocation = self.CheckTemplate(field,template)
-                if (matchLocation != None):
-                    templateName = self.templatesNames[i]
-                    templateName = templateName[0:-4]
-                    pieceType = templateName[0]
-                    angle = templateName[1::]
-                    pieceInfo = [matchLocation[0],matchLocation[1],int(angle), pieceType]
-                if (len(pieceInfo) != 0):
-                    pieces.append(pieceInfo)
+                matchInfo = self.CheckTemplate(field,template)
+                matchDegree.append(matchInfo[0])
+                matchLocation.append(matchInfo[1])
                 i += 1
-        if (len(pieces) == None): pieces = None
+        maxMatchValue = min(matchDegree)
+        if (maxMatchValue < .25):
+            bestTemplateIndex = matchDegree.index(maxMatchValue)
+            templateName = self.templatesNames[bestTemplateIndex]
+            templateName = templateName[0:-4]
+            angle = templateName[1::]
+            pieceInfo = [matchLocation[bestTemplateIndex][0],matchLocation[bestTemplateIndex][1],int(angle), self.letter]
+            pieces.append(pieceInfo)
         return pieces
 
     def CheckTemplate(self, field, template):
         template = np.asanyarray(template).astype(np.uint8)
         field = field.astype(np.uint8)
         res = cv2.matchTemplate(field, template, cv2.TM_SQDIFF)
-        threshold =.25
+        threshold =.15
         minVal,maxVal,minLoc,maxLoc = cv2.minMaxLoc(res)
-
-        if (minVal/100000000 < threshold):
-            return minLoc
-        else: return None
+        return [minVal/100000000, minLoc]
+        #if (minVal/100000000 < threshold):
+        #    return minLoc
+        #else: return None
 
     #field = cv2.imread("templates/Field.jpg",2)
     #IterateThroughTemplates(field)
