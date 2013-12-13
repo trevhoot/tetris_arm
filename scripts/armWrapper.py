@@ -25,6 +25,7 @@ class ArmWrapper():
 		print 'set up pubsubs'
 
 		if arm == 0:
+			# Initializes comunication to arm (tests reasonable possible port names)
 			try:
 				self.arm = st.StArm(dev = '/dev/ttyUSB1', init = False, to = 0.1)
 			except:
@@ -41,9 +42,11 @@ class ArmWrapper():
 		time.sleep(0.2)
 		print 'res =', res
 
-		# initialize arduino serial communication
-		self.ser = serial.Serial('/dev/ttyACM0', 9600)
-		
+		# initialize arduino serial communication  (tests reasonable possible port names)
+		try:
+			self.ser = serial.Serial('/dev/ttyACM0', 9600)
+		except:
+			self.ser = serial.Serial('/dev/ttyACM1', 9600)
 
 		# set up arm starting position
 		self.arm.cartesian()
@@ -104,14 +107,20 @@ class ArmWrapper():
 			doneMsg = 'grabbed'
 			z = -550
 
-		self.arm.move_to(self.x, self.y, z)	# down
+		#should start to close before dropping when picking up a piece, but vice-versa when dropping
+		if size == 'open':  #drop piece
+			self.arm.move_to(self.x, self.y, z)	# down
+			self.gripperPub.publish(size)   # start to close gripper
+		else:   #pick up piece
+			self.gripperPub.publish(size)   # start to close gripper
+			self.arm.move_to(self.x, self.y, z)	# down
 		self.printOut.publish('lowlevel.down: Sending /gripperSize %s' %size)
-		self.gripperPub.publish(size)		# grab it
 		self.size = size
 		time.sleep(1.5)				# give time to pick up piece! TODO (if you can read from servo, make self.up)
 		self.arm.move_to(self.x, self.y, 0)	# up
 		self.printOut.publish('lowlevel.down: Sending /actuated %s' %doneMsg)
 		self.actuatorPub.publish(doneMsg)
+
 
 	def rotate_gripper(self, orientation):
 		if orientation == 1:		# vertical
@@ -128,6 +137,7 @@ class ArmWrapper():
 				self.arm.rotate_wrist_rel(3000)
 				self.gripperOrientation = 0
 				self.arm.lock_wrist_angle()
+
 
 def main(args):
 	rospy.init_node('lowlevel', anonymous=True)

@@ -75,7 +75,12 @@ class StArm():
 
     def __init__(self, dev=DEFAULT_DEV, baud=DEFAULT_BAUD_RATE,
                  init=True, to=DEFAULT_TIMEOUT):
-        self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
+        try:
+            dev = '/dev/ttyUSB0'
+            self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
+        except:
+            dev = '/dev/ttyUSB1'
+            self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
         # TODO
         # Check and parse return values of all ROBOFORTH methods called.
         if init:

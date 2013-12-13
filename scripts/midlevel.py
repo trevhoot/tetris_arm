@@ -6,11 +6,11 @@ roslib.load_manifest('tetris_arm')
 import sys
 import rospy
 import math
+import jointAngles
 
 #to subscribe to and publish images
 from std_msgs.msg import String, Bool, UInt16
 from tetris_arm.msg import TetArmArray, PieceState, DownCommand
-
 
 i, l, j, o, z, s, t = 'I', 'L', 'J', 'O', 'Z', 'S', 'T'
 
@@ -21,13 +21,13 @@ class MidLevel():
 		self.piece = dummyPiece
 		self.letterList = [i, l, j, o, z, s, t]		# letter seen by camera comes in as an index in this list
 		self.holding = 0				# toggle when pick/place piece
-		self.moving = 0					# toggle when treadmill is moving/not moving	TODO
+		self.moving = 1				# toggle when treadmill is moving/not moving	TODO
 		self.inPosition = 0				# toggle when arm is in position or not
 
 		self.threshold = 100000   			# bogus y value that will be reset when the piece is moving TODO
 		self.speed = 0		 			# default value: treadmill isn't moving.
 		self.pickupLine = 6000
-		self.pickupTime = 0
+		self.pickupTime =  .45  #.8 pick up l piece with old version
 
 		# used to calibrate image to arm
 		self.pos_minx = -1490 #-1550    #-1500 actual tested value
@@ -54,21 +54,29 @@ class MidLevel():
 		self.treadmillPub = rospy.Publisher("treadmillMotor", String)
 		self.timingPub = rospy.Publisher("inPosition", String)
 		self.speedPub = rospy.Publisher("beltSpeed", UInt16)
+		self.debugMovingPub = rospy.Publisher("debugMoving", String)         #for debugging with treadmill on
 
-		self.printOut = rospy.Publisher('print', String)							# debugging
+		self.printOut = rospy.Publisher('print', String)	
 		#self.calibratePub = rospy.Publisher('calibrate', String)						# debugging
 		self.calibrateSub = rospy.Subscriber("calibrate", String, self.calibrate)
 		self.pickupTimeSub = rospy.Subscriber("pickupTime", UInt16, self.setPickupTime)
 
+		self.toTreadmill("go")
 
 	def setPickupTime(self,datat):
 		self.pickupTime = data.data
 		
 	def afterTreadmill(self, data):
 		return
+
+	def mmToTic(x):
+		return (x*(3630/355.6))
+
+	def toTreadmill(self,command):
+		self.treadmillPub.publish(command)
+		self.printOut.publish('midlevel.timingLoop: Sending /treadmillMotor %s' %command)
 		
 	def calculateSpeed(self, data):
-
 		# Calclate and publish current speed
 		self.time = int(round(time.time()*1000))
 		deltaTime = self.time - self.prevTime
@@ -76,12 +84,21 @@ class MidLevel():
 
 		# Calculate Eponential Rolling Average
 		alpha = .98
-		if deltaTime > 400: return
+		if deltaTime > 400: 
+			currentAvg = 0
+			self.speedPub.publish(0)
+			return
 		if self.pastAvg ==0: self.pastAvg = deltaTime
 		currentAvg = alpha*self.pastAvg + (1-alpha)*deltaTime
 
-		self.speedPub.publish(self.distPerTick/(currentAvg/1000))
+		#self.speedPub.publish(self.distPerTick/(currentAvg/1000))
+
+		#if (currentAvg - self.pastAvg > 5): 		
+		self.speedPub.publish(int(jointAngles.mmToTic(currentAvg)))     #set it in tiks per second & publish
 		self.pastAvg = currentAvg
+
+		self.debugMovingPub.publish("current speed in ticks %s" %str(jointAngles.mmToTic(currentAvg)))
+		self.debugMovingPub.publish("current threshold %s" %str(self.threshold))
 
 	def updateThreshold(self, data):
 		speed = data.data
@@ -90,6 +107,7 @@ class MidLevel():
 		else: self.moving = 1
 		self.threshold = self.pickupLine + speed * self.pickupTime
 		self.printOut.publish('midlevel.updateThreshold: treshold is %s' %str(self.threshold))
+		self.debugMovingPub.publish('midlevel.updateThreshold: treshold is %s' %str(self.threshold))
 		
 
 	def calibrate(self, data):
@@ -168,8 +186,6 @@ class MidLevel():
 			if self.moving == 0:
 				self.timingPub.publish("now")
 			return
-			self.treadmillPub.publish(self.speed)
-			self.printOut.publish('midlevel.timingLoop: Sending /treadmillMotor %s' %self.speed)
 
 		if data.data == 'now':
 			if self.moving == 1:
@@ -185,7 +201,7 @@ class MidLevel():
 				self.downPub.publish(sizeCmd)
 			else: 
 				return
-				self.treadmillPub.publish(0)     #stop the motor
+				self.treadmillPub.publish("stop")     #stop the motor
 				self.printOut.publish('midlevel.timingLoop: Sending /treadmillMotor 0')
 
 	def goHome(self):
@@ -200,8 +216,6 @@ class MidLevel():
 		pix_maxx = 285
 		pix_miny = 0
 		pix_maxy = 175
-
-
 
 		pixtoticks = (self.pos_maxx - self.pos_minx) / (pix_maxy - pix_miny)
 
@@ -278,7 +292,5 @@ def main(args):
 	except KeyboardInterrupt:
 		print "Shutting down"
 
-
 if __name__ == '__main__':
     main(sys.argv)
-

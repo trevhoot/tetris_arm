@@ -42,8 +42,6 @@ class DeterminePiece:
 
         self.image_sub = rospy.Subscriber("processedImage",Image,self.callback)
 
-
-
     def callback(self,data):
 
         cv_image = self.bridge.imgmsg_to_cv(data, "16UC1")
@@ -84,9 +82,6 @@ class DeterminePiece:
         threshold =.15
         minVal,maxVal,minLoc,maxLoc = cv2.minMaxLoc(res)
         return [minVal/100000000, minLoc]
-        #if (minVal/100000000 < threshold):
-        #    return minLoc
-        #else: return None
 
     #field = cv2.imread("templates/Field.jpg",2)
     #IterateThroughTemplates(field)
