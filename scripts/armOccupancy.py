@@ -4,9 +4,44 @@
 from math import *
 from jointAngles import *
 import matplotlib.pyplot as plt
+from time import *
+
+def closingArea(x1,y1,z1,x2,y2,z2):
+    """
+
+    """
+    prevTime = int(round(time.time()*1000)) #ms
+    workSpace = armSpace(x1,y1,z1,x2,y2,z2)
+    speed = 90/1500 #Degrees/ms
+    theta = 0
+    oldx = x1
+    oldy = y1
+
+    #Find initial parameters
+    l1 = lineLength([x1, y1], [0, 0])
+    l2 = lineLength([x2, y2], [0, 0])
+    l3 = lineLength([x1, y1], [x2, y2])
+
+    psy = acos((l1**2 + l2**2 - l3**2)/(2*l1*l2)) #Angle Origin-Point1-Point2
+    phi = psy + radians(jointAngles(x1,y1,z1)[0]) #Angle of line off vertical from start to end points
+
+
+    while Add something here:
+        currentTime = int(round(time.time()*1000)) #ms
+        deltaTime = currentTime - prevTime #ms
+        theta += speed*deltaTime #Degrees
+        totalTravel = (l1*sin(theta))/sin(pi - theta - psy)
+        newx = oldx + *sin(phi)
+        newy = oldy + *cos(phi)
+
+        armSpace(newx,newy,z1,x2,y2,z2)
+
+        oldx = newx
+        oldy = newy
+        prevTime = currentTime #ms
 
 def armSpace(x1,y1,z1,x2,y2,z2):
-    print x1,y1,z1,',',x2,y2,z2
+    #print x1,y1,z1,',',x2,y2,z2
     #Find base angles
     angles1 = jointAngles(x1,y1,z1)
     angles2 = jointAngles(x2,y2,z2)
@@ -37,7 +72,6 @@ def armSpace(x1,y1,z1,x2,y2,z2):
         return buildWorkspace(pos1, pos2)
     elif theta1 > theta2:
         return buildWorkspace(pos2, pos1)
-
     
 
 def armLocation(length, theta, position = [0,0]):
@@ -55,16 +89,12 @@ def armLocation(length, theta, position = [0,0]):
     p2 = (p1[0]-length*sin(theta),p1[1]-length*cos(theta))
     p3 = (p2[0]-width*cos(theta),p2[1]+width*sin(theta))
     p4 = (p3[0]+length*sin(theta),p3[1]+length*cos(theta))
-    #print 'P1:', p1
-    #print 'P2:', p2
-    #print 'P3:', p3
-    #print 'P4:', p4
-    
+        
     plt.plot([p1[0], p2[0], p3[0], p4[0], p1[0]], [p1[1], p2[1], p3[1], p4[1], p1[1]])
     plt.axis([-700, 700, -200, 700])
 
-
     return [p1, p2, p3, p4]
+
 
 def buildWorkspace(start, end):
     workArea = [end[0], end[1], start[2], start[3]]
@@ -85,7 +115,8 @@ def buildWorkspace(start, end):
     plt.plot(xpoints,ypoints)
     plt.show()
     return workArea
-        
+ 
+
 def appendOuter(workArea, points):
     """
     """
@@ -110,12 +141,12 @@ def appendOuter(workArea, points):
 
 
 def lineLength(p1,p2):
-    #print p1
-    #print p2
     return sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
+
 
 def main():
     armSpace(-1000,5000,0,-4000,4000,0)
+
 
 if __name__ == '__main__':
     main()
