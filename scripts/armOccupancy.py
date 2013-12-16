@@ -10,31 +10,41 @@ def closingArea(x1,y1,z1,x2,y2,z2):
     """
 
     """
-    prevTime = int(round(time.time()*1000)) #ms
+    prevTime = int(round(time()*1000)) #ms
+    print 'start time', prevTime
     workSpace = armSpace(x1,y1,z1,x2,y2,z2)
-    speed = 90/1500 #Degrees/ms
+    speed = radians(90.0)/1500.0 #Rad/ms
     theta = 0
     oldx = x1
     oldy = y1
 
     #Find initial parameters
     l1 = lineLength([x1, y1], [0, 0])
+    print 'start length', l1
     l2 = lineLength([x2, y2], [0, 0])
     l3 = lineLength([x1, y1], [x2, y2])
 
     psy = acos((l1**2 + l2**2 - l3**2)/(2*l1*l2)) #Angle Origin-Point1-Point2
     phi = psy + radians(jointAngles(x1,y1,z1)[0]) #Angle of line off vertical from start to end points
+    print 'phi', phi
 
-
-    while Add something here:
-        currentTime = int(round(time.time()*1000)) #ms
+    while True:
+        currentTime = int(round(time()*1000)) #ms
+        print 'current time', currentTime
         deltaTime = currentTime - prevTime #ms
-        theta += speed*deltaTime #Degrees
-        totalTravel = (l1*sin(theta))/sin(pi - theta - psy)
-        newx = oldx + *sin(phi)
-        newy = oldy + *cos(phi)
+        print 'delta time', deltaTime
 
-        armSpace(newx,newy,z1,x2,y2,z2)
+        theta += speed*deltaTime #Degrees
+        print 'angle change', theta
+        totalTravel = (l1*sin(theta))/sin(pi - theta - psy)
+        print 'total travel', totalTravel
+        newx = oldx + totalTravel*sin(phi)
+        newy = oldy + totalTravel*cos(phi)
+        print 'new coords', newx, newy
+
+
+        workSpace = armSpace(newx,newy,z1,x2,y2,z2)
+        #Publish workspace
 
         oldx = newx
         oldy = newy
@@ -81,7 +91,7 @@ def armLocation(length, theta, position = [0,0]):
     theta : angle of base (rad)
     position : x,y location of the end effector
     """
-    print "Angle:",theta
+    #print "Angle:",theta
     width = 263.5
     dx = 125
     dy = 40
@@ -104,7 +114,7 @@ def buildWorkspace(start, end):
     xpoints = [end[0][0], end[1][0], start[2][0], start[3][0]]
     ypoints = [end[0][1], end[1][1], start[2][1], start[3][1]]
     while workArea[0] != workArea[-1] and len(workArea) < 8:
-        print len(workArea)
+        #print len(workArea)
         top = appendOuter(workArea, checkPoints)
         workArea.append(top)
         xpoints.append(top[0])
@@ -113,7 +123,7 @@ def buildWorkspace(start, end):
         checkPoints.remove(top)
         
     plt.plot(xpoints,ypoints)
-    plt.show()
+    #plt.show()
     return workArea
  
 
@@ -135,8 +145,8 @@ def appendOuter(workArea, points):
         ang = acos((a**2+b**2-h**2)/(2*a*b))
         
         angles[ang] = point
-    print 'ang', angles
-    print ''
+    #print 'ang', angles
+    #print ''
     return angles[max(angles)]
 
 
@@ -145,7 +155,7 @@ def lineLength(p1,p2):
 
 
 def main():
-    armSpace(-1000,5000,0,-4000,4000,0)
+    closingArea(-4000,4000,0,0,6000,0)
 
 
 if __name__ == '__main__':
