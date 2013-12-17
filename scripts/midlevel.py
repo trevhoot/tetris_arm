@@ -25,7 +25,7 @@ class MidLevel():
 		self.inPosition = 0				# toggle when arm is in position or not
 
 		self.threshold = 6000   			# bogus y value that will be reset when the piece is moving TODO
-		self.speed = 1		 			# default value: treadmill isn't moving.
+		self.treadmillSpeed = 0		 			# default value: treadmill isn't moving.
 
 		self.pickupLine = 6000
 		self.pickupTime =  0  #.8 pick up l piece with old version
@@ -73,7 +73,7 @@ class MidLevel():
 		self.executingMove = 0       # prevents it from seeing and storing tons of valid pieces as camera sees them while executing move
 
 	def giveUp(self, data):
-		self.downPub.publish(open)
+		self.downPub.publish('open')
 		self.inPosition = 0
 		self.holding = 0
 		self.goHome()
@@ -117,17 +117,19 @@ class MidLevel():
 
 	def updatePickupTime(self, data):
 		treadmillSpeed = data.data
+		if abs(treadmillSpeed - self.treadmillSpeed) < 10:
+			return
+		self.treadmillSpeed = treadmillSpeed
 		if treadmillSpeed == 0:
 			self.moving = 0
 			self.pickupTime = 0
 			self.threshold = 6000
 		else:
 			self.moving = 1
-			self.threshold = 7300
+			self.threshold = 7000
 			deltaThreshold = self.threshold - 6000
-			dropTime = .3
-			self.pickupTime = (deltaThreshold / treadmillSpeed) - dropTime
-			if self.pickupTime < 0: self.pickupTime = 0 
+			dropTime = .5
+			self.pickupTime = (treadmillSpeed / deltaThreshold) - dropTime
 
 		#self.printOut.publish('midlevel.updateThreshold: threshold is %s' %str(self.threshold))
 		self.debugMovingPub.publish('midlevel.updatePickupTime: pickup time is %f' %self.pickupTime)
@@ -273,8 +275,8 @@ class Piece():
 		self.x = x
 		self.y = y
 		self.th = th
-		jl_offset = 80           #needs to be grabbed off center along hot-dog fold
-		jl_COMoffset = 80        #needs to go away from bottom-heavy COG
+		jl_offset = 140          #needs to be grabbed off center along hot-dog fold
+		jl_COMoffset = 140        #needs to go away from bottom-heavy COG
 
 		if self.letter == j:
 			if th == 0:

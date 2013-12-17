@@ -154,8 +154,8 @@ class Board():
 		self.printOut.publish("highlevel: got a new piece: %s" %piece)
 		self.newPiece(data.data)
 		self.orientation, self.index = self.choosePlace()
-		self.printOut.publish("highlevel: go to index %d, orientation %d" %(index,orientation))
-		self.placeCmdPub.publish((orientation, index))
+		self.printOut.publish("highlevel: go to index %d, orientation %d" %(self.index,self.orientation))
+		self.placeCmdPub.publish((self.orientation, self.index))
 
 	def placedCB(self, data):
 		self.landPiece(self.orientation, self.index)
