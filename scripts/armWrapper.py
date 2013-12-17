@@ -121,7 +121,7 @@ class ArmWrapper():
 
 		self.printOut.publish('lowlevel.down: Sending /gripperSize %s' %size)
 		self.size = size
-		time.sleep(.3)				# give time to pick up piece! TODO (if you can read from servo, make self.up)
+		time.sleep(.15)				# give time to pick up piece! TODO (if you can read from servo, make self.up)
 		self.arm.move_to(self.x, self.y, 0)	# up
 		self.printOut.publish('lowlevel.down: Sending /actuated %s' %doneMsg)
 		self.actuatorPub.publish(doneMsg)
