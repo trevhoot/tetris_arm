@@ -18,8 +18,9 @@ class Board():
 		self.profile = [0,0,0,0,0,0,0,0,0,0]
 
 		# Set up talkers and listeners
-		self.placeCmdPub = rospy.Publisher("putHere", DownCommand)				# send index and orientation to mid level
-		self.newPieceSub = rospy.Subscriber("newPiece", String, self.newPieceCB)	# a New piece has entered the field
+		self.placeCmdPub = rospy.Publisher("putHere", DownCommand) 			# send index and orientation to mid level
+		self.newPieceSub = rospy.Subscriber("newPiece", String, self.newPieceCB) 	# a New piece has entered the field
+		self.placedSub = rospy.Subscriber("placed", String, self.placedCB) 		# the piece has been placed
 
 		self.printOut = rospy.Publisher('print', String)
 
@@ -71,39 +72,66 @@ class Board():
 			if height >= 20:
 				print "the piece is too damn high!"
 				return 0
-		return height
+		return height, blocks
 
+	def contactPoints(self, blocks):
+		points = 0
+		print 'current piece blocks are:', blocks
+		for x, y in blocks:	
+			if y == max(self.blocks[x]) + 1:
+				points += 1
+			try:
+				if y in self.blocks[x+1]:
+					points += 1
+			except: pass
+			try:
+				if y in self.blocks[x-1]:
+					points += 1
+			except: pass
+		return points
 
 	def landPiece(self, orientation, index):
-		vector = (index, self.profile[index] + 1)
-		blocks = self.currPiece.translate(orientation, vector)
+		height, blocks = self.pieceHeight(orientation, index)
 		for x, y in blocks:
 			self.blocks[x] += [y]
 		self.drawProfile()
 
-	def tryPiece(self):
-		choices = []
+	def tryPiece(self):			#returns list of lowest placed piece.
+		lowList = []
 		lowest = 100		#dummy initialization
-		for orientation in range(self.currPiece.numOrientations):
-			for index in range(10-self.currPiece.width[orientation]+1):
-				height = self.pieceHeight(orientation, index)
+		pointsList = []
+		most = 0
+		for orientation in range(self.currPiece.numOrientations):		#try each piece
+			for index in range(10-self.currPiece.width[orientation]+1):	#in each available index
+				height, blocks = self.pieceHeight(orientation, index)
+				points = self.contactPoints(blocks)
+				if points > most:
+					pointsList = []
+					most = points
+				if points >= most:
+					pointsList.append((orientation, index))
 				if height < lowest:
 					lowest = height
-					choices = []
+					lowList = []
 				if height <= lowest:
-					choices.append((orientation, index))
+					lowList.append((orientation, index))
+		choices = []
+		for pointsOption in pointsList:
+			if pointsOption in lowList:
+				choices.append(pointsOption)
+		if choices == []:
+			choices = pointsList
 		return choices
 
 	def choosePlace(self):
-		lowest = self.tryPiece()
-		orientation, index = choice(lowest)
-		self.landPiece(orientation, index)
+		choiceList = self.tryPiece()
+		orientation, index = choice(choiceList)
 		return orientation, index
 
 	def newPiece(self, letter = 0):
 		if letter == 0:
 			letter = choice(['I', 'L', 'J', 'O', 'T', 'S', 'Z'])
-			print letter
+			print 'letter is', letter
 		if letter == 'I':
 			piece = I()
 		if letter == 'L':
@@ -125,10 +153,12 @@ class Board():
 		piece = data.data
 		self.printOut.publish("highlevel: got a new piece: %s" %piece)
 		self.newPiece(data.data)
-		orientation, index = self.choosePlace()
+		self.orientation, self.index = self.choosePlace()
 		self.printOut.publish("highlevel: go to index %d, orientation %d" %(index,orientation))
 		self.placeCmdPub.publish((orientation, index))
 
+	def placedCB(self, data):
+		self.landPiece(self.orientation, self.index)
 
 class Piece():
 	def __init__(self):
@@ -146,9 +176,9 @@ class Piece():
 class I(Piece):
 	def __init__(self):
 		self.numOrientations = 2
-		self.width = [4,1]
-		self.blocks = [ [(0,0),(1,0),(2,0),(3,0)],
-				[(0,0),(0,1),(0,2),(0,3)] ]
+		self.width = [1,4]
+		self.blocks = [ [(0,0),(0,1),(0,2),(0,3)],
+				[(0,0),(1,0),(2,0),(3,0)]]
 		self.colour = (0, 255, 255)
 
 class L(Piece):
@@ -166,9 +196,9 @@ class J(Piece):
 		self.numOrientations = 4
 		self.width = [2,3,2,3]
 		self.blocks = [ [(0,0),(0,1),(1,1),(1,2)],
-				[(0,0),(1,0),(2,0),(0,1)],
+				[(0,1),(1,1),(2,1),(2,0)],
 				[(0,0),(0,1),(0,2),(1,2)],
-				[(0,1),(1,1),(2,1),(2,0)] ]
+				[(0,0),(1,0),(2,0),(0,1)] ]
 		self.colour = (0, 0, 255)
 
 class O(Piece):
@@ -181,33 +211,32 @@ class O(Piece):
 class T(Piece):
 	def __init__(self):
 		self.numOrientations = 4
-		self.width = [3,2,3,2]
-		self.blocks = [ [(0,1),(1,1),(1,0),(2,1)],
-				[(0,1),(1,1),(1,2),(1,0)],
+		self.width = [2,3,2,3]
+		self.blocks = [ [(0,1),(1,1),(1,2),(1,0)],
 				[(0,0),(1,0),(2,0),(1,1)],
-				[(0,0),(0,1),(1,1),(0,2)], ]
+				[(0,0),(0,1),(1,1),(0,2)],
+				[(0,1),(1,1),(1,0),(2,1)] ]
 		self.colour = (255, 0, 255)
 
 class S(Piece):
 	def __init__(self):
 		self.numOrientations = 2
-		self.width = [3,2]
-		self.blocks = [ [(0,0),(1,0),(1,1),(2,1)],
-				[(0,1),(0,2),(1,1),(1,0)] ]
+		self.width = [2,3]
+		self.blocks = [ [(0,1),(0,2),(1,1),(1,0)],
+				[(0,0),(1,0),(1,1),(2,1)] ]
 		self.colour = (255, 0, 0)
 
 class Z(Piece):
 	def __init__(self):
 		self.numOrientations = 2
-		self.width = [3,2]
-		self.blocks = [ [(0,1),(1,1),(1,0),(2,0)],
-				[(0,0),(0,1),(1,1),(1,2)] ]
+		self.width = [2,3]
+		self.blocks = [ [(0,0),(0,1),(1,1),(1,2)],
+				[(0,1),(1,1),(1,0),(2,0)] ]
 		self.colour = (0, 255, 0)
 
 def main(args):
 	rospy.init_node('highlevel', anonymous=True)
 	b = Board()
-
 	try:
 		print "spin"
 		rospy.spin()

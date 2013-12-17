@@ -21,16 +21,12 @@ class MidLevel():
 		self.piece = dummyPiece
 		self.letterList = [i, l, j, o, z, s, t]		# letter seen by camera comes in as an index in this list
 		self.holding = 0				# toggle when pick/place piece
-		self.moving = 1				# toggle when treadmill is moving/not moving	TODO
+		self.moving = 1					# toggle when treadmill is moving/not moving	TODO
 		self.inPosition = 0				# toggle when arm is in position or not
 
-<<<<<<< HEAD
-		self.threshold = 100000   			# bogus y value that will be reset when the piece is moving
-		self.speed = 0		 			# default value: treadmill isn't moving.
-=======
 		self.threshold = 6000   			# bogus y value that will be reset when the piece is moving TODO
 		self.speed = 1		 			# default value: treadmill isn't moving.
->>>>>>> 40d633fdb6068709735ee44f0acf44878ba9e084
+
 		self.pickupLine = 6000
 		self.pickupTime =  0  #.8 pick up l piece with old version
 
@@ -50,32 +46,40 @@ class MidLevel():
 		self.doneSub = rospy.Subscriber("inPosition", String, self.timingLoop)			# Get when arm is finished moving from low level
 		self.gripperSub = rospy.Subscriber("actuated", String, self.afterGripper)		# Get when gripper is done actuating (and status)
 		self.treadmillSub = rospy.Subscriber("treadmillDone", String, self.afterTreadmill)	# Get when treadmill is done changing
-		self.speedSub = rospy.Subscriber("beltSpeed", UInt16, self.updatePickupTime)	
-		self.tick = rospy.Subscriber("encoderTick", String, self.calculateSpeed)	    # Every time magnet passes reed swithc 
+		self.speedSub = rospy.Subscriber("beltSpeed", UInt16, self.updatePickupTime)	#TODO why is this a subscriber and not a method call?
+		self.tickSub = rospy.Subscriber("encoderTick", String, self.calculateSpeed)	   	 # Every time magnet passes reed switch
+		self.giveUpSub = rospy.Subscriber("giveUp", String, self.giveUp)
 
-		self.armPub = rospy.Publisher("armCommand", TetArmArray)				# x,y,orientation
+
+		self.armPub = rospy.Publisher("armCommand", TetArmArray)			# x,y,orientation
 		self.downPub = rospy.Publisher("downCmd", String)					# drop to pick or place piece of a certain size
-		self.newPiecePub = rospy.Publisher("newPiece", String)					# announce newPiece type to highLevel
-		self.treadmillPub = rospy.Publisher("treadmillMotor", String)
-		self.timingPub = rospy.Publisher("inPosition", String)
-		self.speedPub = rospy.Publisher("beltSpeed", UInt16)
-		self.debugMovingPub = rospy.Publisher("debugMoving", String)         #for debugging with treadmill on
+		self.newPiecePub = rospy.Publisher("newPiece", String)				# announce newPiece type to highLevel
+		self.placedPub = rospy.Publisher("placed", String)					# announce piece is placed to highlevel
+		self.treadmillPub = rospy.Publisher("treadmillMotor", String)		# send speed command to arduino
+		self.timingPub = rospy.Publisher("inPosition", String)				# publish to self to call functions asynchronously
+		self.speedPub = rospy.Publisher("beltSpeed", UInt16)		#TODO why is this a publisher and not a method call? 
 
+
+		#TODO get rid of these debugging publishers and test subscribers.
 		self.printOut = rospy.Publisher('print', String)	
 		#self.calibratePub = rospy.Publisher('calibrate', String)						# debugging
 		self.calibrateSub = rospy.Subscriber("calibrate", String, self.calibrate)
 		self.pickupTimeSub = rospy.Subscriber("pickupTime", UInt16, self.setPickupTime)
+		self.debugMovingPub = rospy.Publisher("debugMoving", String)         #for debugging with treadmill on
+
 
 		self.toTreadmill("go")       # makes treadmill 
 
 		self.executingMove = 0       # prevents it from seeing and storing tons of valid pieces as camera sees them while executing move
 
-	def setPickupTime(self,data):
-<<<<<<< HEAD
+	def giveUp(self, data):
+		self.downPub.publish(open)
+		self.inPosition = 0
+		self.holding = 0
+		self.goHome()
+
+	def setPickupTime(self,data):		#What happened here?
 		self.pickupTime = data.data
-=======
-		self.delay = data.data
->>>>>>> 40d633fdb6068709735ee44f0acf44878ba9e084
 		
 	def afterTreadmill(self, data):
 		return
@@ -85,7 +89,7 @@ class MidLevel():
 
 	def toTreadmill(self,command):
 		self.treadmillPub.publish(command)
-		self.printOut.publish('midlevel.timingLoop: Sending /treadmillMotor %s' %command)
+		self.printOut.publish('midlevel.toTreadmill: Sending /treadmillMotor %s' %command)
 		
 	def calculateSpeed(self, data):
 		# Calclate and publish current speed
@@ -105,7 +109,7 @@ class MidLevel():
 		#self.speedPub.publish(self.distPerTick/(currentAvg/1000))
 
 		#if (currentAvg - self.pastAvg > 5): 		
-		self.speedPub.publish(int(jointAngles.mmToTic(currentAvg)))     #set it in tiks per second & publish
+		self.speedPub.publish(int(jointAngles.mmToTic(currentAvg)))     #set it in ticks per second & publish
 		self.pastAvg = currentAvg
 
 		self.debugMovingPub.publish("current speed in ticks %s" %str(jointAngles.mmToTic(currentAvg)))
@@ -158,6 +162,7 @@ class MidLevel():
 		
 	def setPiecePlacement(self, data):
 		orientation, index = data.data
+		orientation = (orientation + 1)%4	# Pieces are 90 degrees off
 		beltWidth = self.pos_maxx - self.pos_minx
 		x = int((index+0.5)*(beltWidth/10.)+self.pos_minx) #maps [0 to 10] to [pos_minx to pos_maxx]
 		self.printOut.publish('midlevel.setPiecePlacement: Received /DownCommand, set piece To-Data to %d, %d' %(x, orientation))
@@ -167,6 +172,7 @@ class MidLevel():
 	def placePiece(self):
 		self.printOut.publish('midlevel.placePiece: Sending %d, %d, %d' %(self.piece.toX, self.pickupLine,self.piece.toOrientation))
 		self.armPub.publish((self.piece.toX,self.pickupLine,self.piece.toOrientation))
+		self.placedPub.publish('placed')
 		self.executingMove = 0
 
 	def afterGripper(self, data):
@@ -295,38 +301,15 @@ class Piece():
 			if th == 270:
 					self.x = x + jl_offset
 					self.y = y - jl_COMoffset
-		if th == 90 or th == 270:	#horizontal?
-			self.orientation = 1		#arm horizontal
-		elif th == 0 or th == 180:	#vertical?
+		if th == 0:			#vertical?
 			self.orientation = 0		#arm vertical
-<<<<<<< HEAD
+		elif th == 90:			#horizontal?
+			self.orientation = 1		#arm horizontal
+		elif th == 180:
+			self.orientation = 2
+		elif th == 270:
+			self.orientation = 3
 
-	def offset(self):
-		x, y = self.x, self.y
-		if self.orientation == 0:			#upright
-			if self.letter == l:
-				x = self.x - self.jl_offset
-			if self.letter == j:
-				x = self.x + self.jl_offset
-		if self.orientation == 1:			#rotated right
-			if self.letter == l:
-				y = self.y + self.jl_offset
-			if self.letter == j:
-				y = self.y - self.jl_offset
-		if self.orientation == 2:			#upside-down
-			if self.letter == l:
-				x = self.x + self.jl_offset
-			if self.letter == j:
-				x = self.x - self.jl_offset
-		if self.orientation == 3:
-			if self.letter == l:
-				y = self.x - self.jl_offset
-			if self.letter == j:
-				y = self.x + self.jl_offset
-		return x, y
-
-=======
->>>>>>> 40d633fdb6068709735ee44f0acf44878ba9e084
 
 	def info(self):
 		return (self.x, self.y, self.orientation)

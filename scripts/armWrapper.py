@@ -27,15 +27,13 @@ class ArmWrapper():
 		print 'set up pubsubs'
 
 		if arm == 0:
-<<<<<<< HEAD
 			self.arm = st.StArm(dev = '/dev/ttyUSB0', init = False, to = 0.1)
-=======
 			# Initializes comunication to arm (tests reasonable possible port names)
 			try:
 				self.arm = st.StArm(dev = '/dev/ttyUSB1', init = False, to = 0.1)
 			except:
 				self.arm = st.StArm(dev = '/dev/ttyUSB0', init = False, to = 0.1)
->>>>>>> 40d633fdb6068709735ee44f0acf44878ba9e084
+
 			self.arm.start()
 		else: self.arm = arm
 
@@ -138,6 +136,16 @@ class ArmWrapper():
 
 
 	def rotate_gripper(self, orientation):
+		if orientation == self.gripperOrientation:
+			return
+		if orientation < self.gripperOrientation:
+			direction = -1
+		else: direction = 1
+		self.arm.rotate_wrist_rel(3000*direction*abs(orientation - self.gripperOrientation))
+		self.gripperOrientation = orientation
+		self.arm.lock_wrist_angle()
+
+		'''
 		if orientation == 1:		# vertical
 			if self.gripperOrientation == 1:
 				pass
@@ -152,7 +160,7 @@ class ArmWrapper():
 				self.arm.rotate_wrist_rel(3000)
 				self.gripperOrientation = 0
 				self.arm.lock_wrist_angle()
-
+		'''
 
 def main(args):
 	rospy.init_node('lowlevel', anonymous=True)
