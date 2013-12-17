@@ -123,10 +123,11 @@ class MidLevel():
 			self.threshold = 6000
 		else:
 			self.moving = 1
-			self.threshold = 7000
+			self.threshold = 7300
 			deltaThreshold = self.threshold - 6000
-			dropTime = .5
-			self.pickupTime = (treadmillSpeed / deltaThreshold) - dropTime
+			dropTime = .3
+			self.pickupTime = (deltaThreshold / treadmillSpeed) - dropTime
+			if self.pickupTime < 0: self.pickupTime = 0 
 
 		#self.printOut.publish('midlevel.updateThreshold: threshold is %s' %str(self.threshold))
 		self.debugMovingPub.publish('midlevel.updatePickupTime: pickup time is %f' %self.pickupTime)
@@ -272,8 +273,8 @@ class Piece():
 		self.x = x
 		self.y = y
 		self.th = th
-		jl_offset = 140          #needs to be grabbed off center along hot-dog fold
-		jl_COMoffset = 140        #needs to go away from bottom-heavy COG
+		jl_offset = 80           #needs to be grabbed off center along hot-dog fold
+		jl_COMoffset = 80        #needs to go away from bottom-heavy COG
 
 		if self.letter == j:
 			if th == 0:
