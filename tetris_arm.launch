@@ -113,6 +113,7 @@
 	<node name="identifyT" pkg="tetris_arm" type="identify.py"  cwd="node" args="T"/>
 	<node name="identifyS" pkg="tetris_arm" type="identify.py"  cwd="node" args="S"/>
 	<node name="identifyZ" pkg="tetris_arm" type="identify.py"  cwd="node" args="Z"/>
+  <node name="identifyI" pkg="tetris_arm" type="identify.py"  cwd="node" args="I"/>
 
 	<node name="armWrapper" pkg="tetris_arm" type="armWrapper.py"  cwd="node" />
 	<node name="midlevel" pkg="tetris_arm" type="midlevel.py"  cwd="node" />
