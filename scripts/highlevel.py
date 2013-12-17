@@ -23,6 +23,7 @@ class Board():
 		self.placedSub = rospy.Subscriber("placed", String, self.placedCB) 		# the piece has been placed
 
 		self.printOut = rospy.Publisher('print', String)
+		self.printCommand = rospy.Publisher('AI', String)
 
 	def __repr__(self):
 		out = ''
@@ -159,6 +160,7 @@ class Board():
 
 	def placedCB(self, data):
 		self.landPiece(self.orientation, self.index)
+		self.printCommand.publish("%s piece placed at %d index in %d orientation" %(self.currPiece, self.index, self.orientation))
 
 class Piece():
 	def __init__(self):
