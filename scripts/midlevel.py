@@ -112,7 +112,7 @@ class MidLevel():
 			self.moving = 1
 			self.threshold = 7300
 			deltaThreshold = self.threshold - 6000
-			dropTime = .2
+			dropTime = .3
 			self.pickupTime = (deltaThreshold / treadmillSpeed) - dropTime
 			if self.pickupTime < 0: self.pickupTime = 0 
 

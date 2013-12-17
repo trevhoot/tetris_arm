@@ -65,15 +65,16 @@ class DeterminePiece:
                 matchDegree.append(matchInfo[0])
                 matchLocation.append(matchInfo[1])
                 i += 1
-        maxMatchValue = min(matchDegree)
-        if (maxMatchValue < .25):
-            bestTemplateIndex = matchDegree.index(maxMatchValue)
-            templateName = self.templatesNames[bestTemplateIndex]
-            templateName = templateName[0:-4]
-            angle = templateName[1::]
-            pieceInfo = [matchLocation[bestTemplateIndex][0],matchLocation[bestTemplateIndex][1],int(angle), self.letter]
-            pieces.append(pieceInfo)
-        return pieces
+        if len(matchDegree) != 0:
+            maxMatchValue = min(matchDegree)
+            if (maxMatchValue < .25):
+              bestTemplateIndex = matchDegree.index(maxMatchValue)
+              templateName = self.templatesNames[bestTemplateIndex]
+              templateName = templateName[0:-4]
+              angle = templateName[1::]
+              pieceInfo = [matchLocation[bestTemplateIndex][0],matchLocation[bestTemplateIndex][1],int(angle), self.letter]
+              pieces.append(pieceInfo)
+            return pieces
 
     def CheckTemplate(self, field, template):
         template = np.asanyarray(template).astype(np.uint8)
