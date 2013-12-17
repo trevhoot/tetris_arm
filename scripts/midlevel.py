@@ -6,11 +6,11 @@ roslib.load_manifest('tetris_arm')
 import sys
 import rospy
 import math
+import jointAngles
 
 #to subscribe to and publish images
 from std_msgs.msg import String, Bool, UInt16
 from tetris_arm.msg import TetArmArray, PieceState, DownCommand
-
 
 i, l, j, o, z, s, t = 'I', 'L', 'J', 'O', 'Z', 'S', 'T'
 
@@ -21,18 +21,23 @@ class MidLevel():
 		self.piece = dummyPiece
 		self.letterList = [i, l, j, o, z, s, t]		# letter seen by camera comes in as an index in this list
 		self.holding = 0				# toggle when pick/place piece
-		self.moving = 0					# toggle when treadmill is moving/not moving	TODO
+		self.moving = 1				# toggle when treadmill is moving/not moving	TODO
 		self.inPosition = 0				# toggle when arm is in position or not
 
+<<<<<<< HEAD
 		self.threshold = 100000   			# bogus y value that will be reset when the piece is moving
 		self.speed = 0		 			# default value: treadmill isn't moving.
+=======
+		self.threshold = 6000   			# bogus y value that will be reset when the piece is moving TODO
+		self.speed = 1		 			# default value: treadmill isn't moving.
+>>>>>>> 40d633fdb6068709735ee44f0acf44878ba9e084
 		self.pickupLine = 6000
-		self.pickupTime = 0
+		self.pickupTime =  0  #.8 pick up l piece with old version
 
 		# used to calibrate image to arm
-		self.pos_minx = -1500    #-1500 actual tested value
-		self.pos_maxx = 1700     #1700 acutal tested value
-		self.pos_miny = 5300		#maxy ~ 11500
+		self.pos_minx = -1490 #-1550    #-1500 actual tested value
+		self.pos_maxx = 2050     #1700 acutal tested value
+		self.pos_miny = 5470#5450		#maxy ~ 11500
 
 		# variables for determaning speed of treadmill
 		self.prevTime = int(round(time.time()*1000))
@@ -45,7 +50,7 @@ class MidLevel():
 		self.doneSub = rospy.Subscriber("inPosition", String, self.timingLoop)			# Get when arm is finished moving from low level
 		self.gripperSub = rospy.Subscriber("actuated", String, self.afterGripper)		# Get when gripper is done actuating (and status)
 		self.treadmillSub = rospy.Subscriber("treadmillDone", String, self.afterTreadmill)	# Get when treadmill is done changing
-		self.speedSub = rospy.Subscriber("beltSpeed", UInt16, self.updateThreshold)	
+		self.speedSub = rospy.Subscriber("beltSpeed", UInt16, self.updatePickupTime)	
 		self.tick = rospy.Subscriber("encoderTick", String, self.calculateSpeed)	    # Every time magnet passes reed swithc 
 
 		self.armPub = rospy.Publisher("armCommand", TetArmArray)				# x,y,orientation
@@ -54,21 +59,35 @@ class MidLevel():
 		self.treadmillPub = rospy.Publisher("treadmillMotor", String)
 		self.timingPub = rospy.Publisher("inPosition", String)
 		self.speedPub = rospy.Publisher("beltSpeed", UInt16)
+		self.debugMovingPub = rospy.Publisher("debugMoving", String)         #for debugging with treadmill on
 
-		self.printOut = rospy.Publisher('print', String)							# debugging
+		self.printOut = rospy.Publisher('print', String)	
 		#self.calibratePub = rospy.Publisher('calibrate', String)						# debugging
 		self.calibrateSub = rospy.Subscriber("calibrate", String, self.calibrate)
 		self.pickupTimeSub = rospy.Subscriber("pickupTime", UInt16, self.setPickupTime)
 
+		self.toTreadmill("go")       # makes treadmill 
+
+		self.executingMove = 0       # prevents it from seeing and storing tons of valid pieces as camera sees them while executing move
 
 	def setPickupTime(self,data):
+<<<<<<< HEAD
 		self.pickupTime = data.data
+=======
+		self.delay = data.data
+>>>>>>> 40d633fdb6068709735ee44f0acf44878ba9e084
 		
 	def afterTreadmill(self, data):
 		return
+
+	def mmToTic(x):
+		return (x*(3630/355.6))
+
+	def toTreadmill(self,command):
+		self.treadmillPub.publish(command)
+		self.printOut.publish('midlevel.timingLoop: Sending /treadmillMotor %s' %command)
 		
 	def calculateSpeed(self, data):
-
 		# Calclate and publish current speed
 		self.time = int(round(time.time()*1000))
 		deltaTime = self.time - self.prevTime
@@ -76,50 +95,71 @@ class MidLevel():
 
 		# Calculate Eponential Rolling Average
 		alpha = .98
-		if deltaTime > 400: return
+		if deltaTime > 400: 
+			currentAvg = 0
+			self.speedPub.publish(0)
+			return
 		if self.pastAvg ==0: self.pastAvg = deltaTime
 		currentAvg = alpha*self.pastAvg + (1-alpha)*deltaTime
 
-		self.speedPub.publish(self.distPerTick/(currentAvg/1000))
+		#self.speedPub.publish(self.distPerTick/(currentAvg/1000))
+
+		#if (currentAvg - self.pastAvg > 5): 		
+		self.speedPub.publish(int(jointAngles.mmToTic(currentAvg)))     #set it in tiks per second & publish
 		self.pastAvg = currentAvg
 
-	def updateThreshold(self, data):
-		speed = data.data
-		if speed == 0:
+		self.debugMovingPub.publish("current speed in ticks %s" %str(jointAngles.mmToTic(currentAvg)))
+		self.debugMovingPub.publish("current threshold %s" %str(self.threshold))
+
+	def updatePickupTime(self, data):
+		treadmillSpeed = data.data
+		if treadmillSpeed == 0:
 			self.moving = 0
-		else: self.moving = 1
-		self.threshold = self.pickupLine + speed * self.pickupTime
-		self.printOut.publish('midlevel.updateThreshold: treshold is %s' %str(self.threshold))
+			self.pickupTime = 0
+			self.threshold = 6000
+		else:
+			self.moving = 1
+			self.threshold = 7000
+			deltaThreshold = self.threshold - 6000
+			dropTime = .5
+			self.pickupTime = (treadmillSpeed / deltaThreshold) - dropTime
+
+		#self.printOut.publish('midlevel.updateThreshold: threshold is %s' %str(self.threshold))
+		self.debugMovingPub.publish('midlevel.updatePickupTime: pickup time is %f' %self.pickupTime)
 		
 
 	def calibrate(self, data):
-		minx, maxx, miny = list(data.data)
-		self.printOut.publish(str(minx, maxx, miny))
-		self.pos_minx = minx
-		self.pos_maxx = maxx
-		self.pos_miny = miny
+		maxx, minx, miny = data.data.split(' ')
+		self.printOut.publish('%s, %s, %s' %(minx, maxx, miny))
+		self.pos_minx = int(minx)
+		self.pos_maxx = int(maxx)
+		self.pos_miny = int(miny)
 
 	def setPiece(self, data):
-		#self.printOut.publish('midlevel: piece is %s' %self.piece)
-		print 'setting piece data'
-		pix_x, pix_y, th, letterindex = data.data
-		letter = self.letterList[letterindex]
-		x, y = self.pixtopos(pix_x, pix_y)
+		if self.executingMove == 0:
+			pix_x, pix_y, th, letterindex = data.data
+			letter = self.letterList[letterindex]
+			x, y = self.pixtopos(pix_x, pix_y)
+			#self.printOut.publish('midlevel.setPiece: y is %d' %y)
+			if (y < self.threshold):
+				self.executingMove = 1
+				self.printOut.publish("sleeping for: %s" %str(self.pickupTime))
+				time.sleep(self.pickupTime)
+				self.printOut.publish("midlevel.setPiece: piece is below")
+				self.timingPub.publish("now")
 
-		if y < self.threshold:
-			self.timingPub.publish("now")
-
-		if letter != self.piece.letter:			#new piece --OR WATCH FOR FALSE POSITIVES!
-			self.piece = Piece(letter)
-			self.printOut.publish('midlevel.pieceType: Recieved /pieceState %s' %letter)
-			self.newPiecePub.publish(String(letter))
-			self.piece.set_xyth(x, y, th)
-			self.pickPiece()
+			if letter != self.piece.letter:			#new piece
+				self.piece = Piece(letter)
+				self.printOut.publish('midlevel.pieceType: Recieved /pieceState %s' %letter)
+				self.newPiecePub.publish(String(letter))
+				self.piece.set_xyth(x, y, th)
+				self.pickPiece()
 		return
 		
 	def setPiecePlacement(self, data):
 		orientation, index = data.data
-		x = int(index*(self.pos_maxx - self.pos_minx)/10.+self.pos_minx)  #maps [0 to 10] to [pos_minx to pos_maxx]
+		beltWidth = self.pos_maxx - self.pos_minx
+		x = int((index+0.5)*(beltWidth/10.)+self.pos_minx) #maps [0 to 10] to [pos_minx to pos_maxx]
 		self.printOut.publish('midlevel.setPiecePlacement: Received /DownCommand, set piece To-Data to %d, %d' %(x, orientation))
 		self.piece.toOrientation = orientation
 		self.piece.toX = x
@@ -127,6 +167,7 @@ class MidLevel():
 	def placePiece(self):
 		self.printOut.publish('midlevel.placePiece: Sending %d, %d, %d' %(self.piece.toX, self.pickupLine,self.piece.toOrientation))
 		self.armPub.publish((self.piece.toX,self.pickupLine,self.piece.toOrientation))
+		self.executingMove = 0
 
 	def afterGripper(self, data):
 		s = data.data
@@ -155,19 +196,17 @@ class MidLevel():
 
 	def timingLoop(self, data):			#terrible name; come up with a new one.
 		if self.piece.letter == 'X':
-			self.printOut.publish("midlevel.timingLoop: piece is an X, I don't care.")
+			#self.printOut.publish("midlevel.timingLoop: piece is an X, I don't care.")
 			return
 		if data.data == 'stopped':
 			self.printOut.publish('midlevel.timingLoop: Recieved /inPosition %s' %data.data)
 			self.inPosition = 1
-			self.printOut.publish('midlevel.timingLoop: Set self.inPosition = 1')
+			self.printOut.publish('midlevel.timingXLoop: Set self.inPosition = 1, holding = %d, moving = %d' %(self.holding, self.moving))
 			if self.holding == 1:
 				self.timingPub.publish("now")
 			if self.moving == 0:
 				self.timingPub.publish("now")
 			return
-			self.treadmillPub.publish(self.speed)
-			self.printOut.publish('midlevel.timingLoop: Sending /treadmillMotor %s' %self.speed)
 
 		if data.data == 'now':
 			if self.moving == 1:
@@ -183,7 +222,7 @@ class MidLevel():
 				self.downPub.publish(sizeCmd)
 			else: 
 				return
-				self.treadmillPub.publish(0)     #stop the motor
+				self.treadmillPub.publish("stop")     #stop the motor
 				self.printOut.publish('midlevel.timingLoop: Sending /treadmillMotor 0')
 
 	def goHome(self):
@@ -198,8 +237,6 @@ class MidLevel():
 		pix_maxx = 285
 		pix_miny = 0
 		pix_maxy = 175
-
-
 
 		pixtoticks = (self.pos_maxx - self.pos_minx) / (pix_maxy - pix_miny)
 
@@ -219,9 +256,7 @@ class Piece():
 		if letter in [o, z, s, t]:
 			self.size = 'big'
 		if letter == 'X':
-			self.size = 'fake' 		#This is a placeholder and it is bad.
-
-		self.jl_offset = 10		#how much is the com offset by?
+			self.size = 'fake' 		#This is a placeholder, and it is bad.
 
 	def __repr__(self):
 		return self.letter
@@ -231,10 +266,40 @@ class Piece():
 		self.x = x
 		self.y = y
 		self.th = th
+		jl_offset = 140          #needs to be grabbed off center along hot-dog fold
+		jl_COMoffset = 140        #needs to go away from bottom-heavy COG
+
+		if self.letter == j:
+			if th == 0:
+					self.y = y + jl_offset
+					self.x = x - jl_COMoffset
+			if th == 90:
+					self.x = x - jl_offset
+					self.y = y + jl_COMoffset
+			if th == 180:
+					self.y = y - jl_offset
+					self.x = x + jl_COMoffset
+			if th == 270:
+					self.x = x + jl_offset
+					self.y = y - jl_COMoffset
+		if self.letter == l:
+			if th == 0:
+					self.x = x - jl_COMoffset
+					self.y = y - jl_offset
+			if th == 90:
+					self.x = x - jl_offset
+					self.y = y + jl_COMoffset
+			if th == 180:
+					self.x = x + jl_COMoffset
+					self.y = y + jl_offset
+			if th == 270:
+					self.x = x + jl_offset
+					self.y = y - jl_COMoffset
 		if th == 90 or th == 270:	#horizontal?
 			self.orientation = 1		#arm horizontal
 		elif th == 0 or th == 180:	#vertical?
 			self.orientation = 0		#arm vertical
+<<<<<<< HEAD
 
 	def offset(self):
 		x, y = self.x, self.y
@@ -260,12 +325,11 @@ class Piece():
 				y = self.x + self.jl_offset
 		return x, y
 
+=======
+>>>>>>> 40d633fdb6068709735ee44f0acf44878ba9e084
 
 	def info(self):
-		if self.letter in [l, j]:
-			x, y = self.offset()
-		else: x, y = self.x, self.y
-		return (x, y, self.orientation)
+		return (self.x, self.y, self.orientation)
 
 def main(args):
 	rospy.init_node('midlevel', anonymous=True)
@@ -277,7 +341,5 @@ def main(args):
 	except KeyboardInterrupt:
 		print "Shutting down"
 
-
 if __name__ == '__main__':
     main(sys.argv)
-

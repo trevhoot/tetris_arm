@@ -15,7 +15,7 @@ from tetris_arm.msg import DownCommand
 class Board():
 	def __init__(self):
 		self.blocks = {k:[0] for k in range(10)}
-		self.profile = [0,0,0,1,2,1,0,0,0,0]
+		self.profile = [0,0,0,0,0,0,0,0,0,0]
 
 		# Set up talkers and listeners
 		self.placeCmdPub = rospy.Publisher("putHere", DownCommand)				# send index and orientation to mid level

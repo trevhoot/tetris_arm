@@ -3,7 +3,7 @@ import re
 import shlex
 
 # Use this one for Mac/Linux
-DEFAULT_DEV = '/dev/tty.KeySerial1'
+# DEFAULT_DEV = '/dev/tty.KeySerial1'
 
 # Use this one for PC
 DEFAULT_DEV = '/dev/ttyUSB0'
@@ -75,7 +75,12 @@ class StArm():
 
     def __init__(self, dev=DEFAULT_DEV, baud=DEFAULT_BAUD_RATE,
                  init=True, to=DEFAULT_TIMEOUT):
-        self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
+        try:
+            dev = '/dev/ttyUSB0'
+            self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
+        except:
+            dev = '/dev/ttyUSB1'
+            self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
         # TODO
         # Check and parse return values of all ROBOFORTH methods called.
         if init:
