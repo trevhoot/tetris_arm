@@ -27,42 +27,20 @@ class safetyNode():
         print "init"
 
         #initiates topics to publish piece state and type to
-
-        #Publishes to rospy.Publisher("topic", type of information)
-        self.processedImage_pub = rospy.Publisher("processedImage", Image)
-
-        #placeholder for image
-        #cv2.namedWindow("Image window", 1)
-        cv2.namedWindow("Arm Space Image",1)
-        cv2.namedWindow("workArea",1)
-        cv2.namedWindow("otherArea",1)
-        cv2.namedWindow("subtraction",1)
+        self.armPub = rospy.Publisher("armCommand", TetArmArray)
+        self.treadmillPub = rospy.Publisher("treadmillMotor", String)
+        self.warningPub = rospy.Publisher("WarningLED", String)
+        self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image, self.imageProcess)
+        self.midlevelCommand = rospy.Subscriber("destination",TetArmArray, self.passArmCommand)
         
         self.bridge = CvBridge()
-        
-        #if it sees a new image it passes that information on (callback)
-        #subscibes to depth image from kinect and passes it to callback fn.
+
+        self.emergency = 0
         
         self.armPosition = position
 
-        self.readySub = rospy.Subscriber("ready", TetArmArray, self.readyTest)
-        self.readyPub = rospy.Publisher("ready", TetArmArray)
-        #self.armPub = rospy.Publisher("armCommand", TetArmArray)
-        #self.treadmillPub = rospy.Publisher("treadmillMotor", String)
-        #self.warningPub = rospy.Publisher("WarningLED", String)
-        self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image, self.imageProcess)
+       
     
-    def readyTest(self, command):
-        x1 = self.armPosition[0]
-        y1 = self.armPosition[1]
-
-        x2 = command[0]
-        y2 = command[1]
-
-        workArea, armArea = self.armSpace(x1,y1,x2,y2)
-
-        #Map arm position to kinect data...somehow...
-
     def imageProcess(self,image):
          #converts ROS Image message pointer to OpenCV message in 16bit mono format
              #Basically we need to convert the CV image into a numpy array
@@ -75,6 +53,7 @@ class safetyNode():
             #crop_image = cv_image[77:243,230:415]
         crop_image = cv_image[40:360,0:370]
 
+        #probably can delete this
         self.xsize = 370-0
         self.ysize = 360-40
         
@@ -88,20 +67,18 @@ class safetyNode():
         crop_image = (np.asanyarray(crop_image) - 1210) * 2
         #converts 16mono to 8mono to be threshold processed
             # in .**, . means floating point*
-        crop_image = (crop_image/2.**8).astype(np.uint8)
 
-        #crop_image = (crop_image).astype(np.uint8)
+        crop_image = (crop_image/2.**8).astype(np.uint8)
 
         #extracts the areas that are taller than just under the height of the pieces
         whatisthis, thresh1 = cv2.threshold(crop_image, 250, 255, cv2.THRESH_BINARY)
-        #Display image \
 
+
+        ##################################################SHOULD BE INIPUT##################################################
         box = self.armSpace(3000,3000,6000,100)
-        #Box is in mm
+        #Box is in Smm
 
-        #print box[0][1]
         armArea = box[1]
-        #pt = self.posToTix(box[0][3][0], box[0][3][1])
         armAreaArray = []
         for point in armArea:
             xinpix = self.mmToTic(point[0])
@@ -122,35 +99,30 @@ class safetyNode():
             together = self.ticToPix(xinpix,yinpix)
             workAreaArray.append([int(together[0]),int(together[1])]) 
 
-
-        #sub = self.subtractShape(thresh1, [[200,200],[200,100],[100,100],[100,200]])
-        
         obstacleImage = self.createArmSpaceImage(sub,np.array(workAreaArray))
-        '''
+        obstacleImage = obstacleImage.astype(np.uint8)
 
+        # finding the area of objects in the working envelope
         contours, hierarchy = cv2.findContours(obstacleImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-
-        # finding contour with maximum area and store it as best_cnt
-        max_area = 0
+        total_area = 0
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area > max_area:
-                max_area = area
-                best_cnt = cnt
+            total_area = total_area + area
 
-        print "cnt", best_cnt
-        '''
-        cv2.imshow("workArea", thresh1)
-        cv2.imshow("Arm Space Image", obstacleImage)
-        cv2.imshow("subtraction",sub)
-        cv2.waitKey(3)
+        if total_area > 9000:                                     # Obsical in arm path
+            if self.emergency == 0:             
+                self.treadmillPub.publish("stop")                 # Stop treadmill of emergency state just triggered
+            self.emergency = 1                                    # Set emergency state high
+            print "ermergerd"
+        else: 
+            if self.emergency == 1:                               # If leaving emergency state start treadmill again
+                self.treadmillPub.publish("go")                   # Start treadmill again
+                self.midlevelCommand.publish(self.pastCommand)    # Send paused command
+            self.emergency = 0                                    # Set emergency state low
+            print "all clear, matey!"
         
         #self.bridge.cv_to_imgmsg(thresh1)
         self.msg = cv.fromarray(thresh1)
-
-        self.msg = self.bridge.cv_to_imgmsg(self.msg)
-        if (thresh1 != None):
-            self.processedImage_pub.publish(self.msg)
 
     def createArmSpaceImage(self,image1,points):
         workArea = np.zeros((self.ysize,self.xsize))
@@ -159,10 +131,6 @@ class safetyNode():
         cv2.imshow("otherArea", workArea)
         workArea = workArea.astype(np.int16)
         image1 = image1.astype(np.int16)
-
-
-        print image1
-        
         
         return workArea.__and__(image1)
 
@@ -172,6 +140,12 @@ class safetyNode():
         cv2.fillConvexPoly(shape, np.array(points), 255, 1)
 
         return  image1 - shape
+
+    def passArmCommand(self,data):
+        if self.emergency == 0:
+            self.midlevelCommand.publish(data)
+        else:
+            self.pastCommand = data
 
     def armSpace(self,x1,y1,x2,y2):
         #print x1,y1,',',x2,y2
@@ -192,8 +166,6 @@ class safetyNode():
         length1 = dist1 + 40 #length from base to end of arm
         length2 = dist2 + 40 #length from base to end of arm
 
-        #print "Len 1:", length1
-        #print "Len 2:", length2
         pos1 = self.armLocation(length1,theta1,[x1,y1])
         pos2 = self.armLocation(length2,theta2,[x2,y2])
 
@@ -244,14 +216,11 @@ class safetyNode():
 
         a = sqrt(x**2 + y**2)
         b = sqrt(a**2 + z**2)
-    #    print b
+
         phi = atan2(z,a)
         psy = atan2(a,z)
         theta3 = acos(2 - b**2/375**2)
         chi = (pi - theta3)/2
-    #    print phi*(180/pi)
-     #   print psy*(180/pi)
-      #  print chi*(180/pi)
 
         theta3 = theta3*(180/pi) #Elbow
         theta1 = atan(x/y)*(180/pi) #Base
@@ -307,13 +276,8 @@ class safetyNode():
         #plt.ion()    
         #plt.plot(xpoints,ypoints)
         #plt.show()
-
-        #print "should be showing"
-        #raw_input()
-        #plt.close()
         return workArea
      
-
     def appendOuter(self,workArea, points):
         """
         """
@@ -332,8 +296,7 @@ class safetyNode():
             ang = acos((a**2+b**2-h**2)/(2*a*b))
             
             angles[ang] = point
-        #print 'ang', angles
-        #print ''
+
         return angles[max(angles)]
 
 

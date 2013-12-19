@@ -20,10 +20,7 @@ from rospy.numpy_msg import numpy_msg
 from tetris_arm.msg import ProcessedImage
 from cv_bridge import CvBridge, CvBridgeError
 
-
 #for processing test. Delete when ROS communication works
-
-
 
 """
 dependencies needed for manifest to run: 
