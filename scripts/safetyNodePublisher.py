@@ -32,8 +32,10 @@ class safetyNode():
         self.processedImage_pub = rospy.Publisher("processedImage", Image)
 
         #placeholder for image
-        cv2.namedWindow("Image window", 1)
-        cv2.namedWindow("image2",1)
+        #cv2.namedWindow("Image window", 1)
+        cv2.namedWindow("Arm Space Image",1)
+        cv2.namedWindow("workArea",1)
+        cv2.namedWindow("otherArea",1)
         cv2.namedWindow("subtraction",1)
         
         self.bridge = CvBridge()
@@ -72,6 +74,9 @@ class safetyNode():
             #parse out location RIO (the treadmill area)
             #crop_image = cv_image[77:243,230:415]
         crop_image = cv_image[40:360,0:370]
+
+        self.xsize = 370-0
+        self.ysize = 360-40
         
         #converts image to numpy array and scales the 16bit for depth RIO
         #values we are interested in are in the 12000 value range. scale to 250 before convert to 8bit to not lose info
@@ -91,27 +96,52 @@ class safetyNode():
         whatisthis, thresh1 = cv2.threshold(crop_image, 250, 255, cv2.THRESH_BINARY)
         #Display image \
 
-        print "type", type(thresh1)
         box = self.armSpace(3000,3000,6000,100)
-        #print box[0][1]
-        inBox = box[0]
-        print box
-        #pt = self.posToTix(box[0][3][0], box[0][3][1])
-        for point in inBox:
-            cv2.circle(thresh1, self.posToTix(point[1],point[0]), 200, (200,200,255))
-        blank = np.zeros((320,370))
-        
-        cv2.fillConvexPoly(blank, np.array([[200,200],[200,100],[100,100],[100,200]]), 255)
-        #pt = self.posToTix(3000,3000)
-        #pt = self.posToTix(6000,100)
-        #print pt
+        #Box is in mm
 
-        #cv2.circle(thresh1, (20,20),5, (200,200,255))
+        #print box[0][1]
+        armArea = box[1]
+        #pt = self.posToTix(box[0][3][0], box[0][3][1])
+        armAreaArray = []
+        for point in armArea:
+            xinpix = self.mmToTic(point[0])
+            yinpix = self.mmToTic(point[1])
+            together = self.ticToPix(xinpix,yinpix)
+            armAreaArray.append([int(together[0]),int(together[1])]) 
+
+            cv2.circle(thresh1, self.ticToPix(self.mmToTic(point[0]),self.mmToTic(point[1])), 5, (200,200,255))
+
+        sub = self.subtractShape(thresh1, np.array(armAreaArray))        
+
+        workArea = box[0]
+        workAreaArray = []
+
+        for point in workArea:
+            xinpix = self.mmToTic(point[0])
+            yinpix = self.mmToTic(point[1])
+            together = self.ticToPix(xinpix,yinpix)
+            workAreaArray.append([int(together[0]),int(together[1])]) 
+
+
+        #sub = self.subtractShape(thresh1, [[200,200],[200,100],[100,100],[100,200]])
         
-        #cv2.circle(thresh1, pt, 10, (0,0,0))
-        sub = thresh1 - blank
-        cv2.imshow("Image window", thresh1)
-        cv2.imshow("image2", blank)
+        obstacleImage = self.createArmSpaceImage(sub,np.array(workAreaArray))
+        '''
+
+        contours, hierarchy = cv2.findContours(obstacleImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+        # finding contour with maximum area and store it as best_cnt
+        max_area = 0
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area > max_area:
+                max_area = area
+                best_cnt = cnt
+
+        print "cnt", best_cnt
+        '''
+        cv2.imshow("workArea", thresh1)
+        cv2.imshow("Arm Space Image", obstacleImage)
         cv2.imshow("subtraction",sub)
         cv2.waitKey(3)
         
@@ -122,12 +152,26 @@ class safetyNode():
         if (thresh1 != None):
             self.processedImage_pub.publish(self.msg)
 
-    def createArmSpaceImage(self):
-        return
+    def createArmSpaceImage(self,image1,points):
+        workArea = np.zeros((self.ysize,self.xsize))
 
-    def subtractImages(self, image1, image2):
-        return
+        cv2.fillConvexPoly(workArea, np.array(points), 255,1)
+        cv2.imshow("otherArea", workArea)
+        workArea = workArea.astype(np.int16)
+        image1 = image1.astype(np.int16)
 
+
+        print image1
+        
+        
+        return workArea.__and__(image1)
+
+    def subtractShape(self, image1, points):
+        #points should be in form: [[pt1x,pt1y],[pt2x,pt2y],..]
+        shape = np.zeros((self.ysize,self.xsize))#, dtype=np.int8)
+        cv2.fillConvexPoly(shape, np.array(points), 255, 1)
+
+        return  image1 - shape
 
     def armSpace(self,x1,y1,x2,y2):
         #print x1,y1,',',x2,y2
@@ -160,7 +204,7 @@ class safetyNode():
         elif theta1 > theta2:
             return self.buildWorkspace(pos2, pos1), pos1
         
-    def posToTix(self, tick_x, tick_y):
+    def ticToPix(self, tick_x, tick_y):
         # Board cropped to [77:243,230:515] in collectKinectNode.py
 
         pos_minx = -1490. #-1550    #-1500 actual tested value
@@ -238,7 +282,7 @@ class safetyNode():
         p3 = (p2[0]-width*cos(theta),p2[1]+width*sin(theta))
         p4 = (p3[0]+length*sin(theta),p3[1]+length*cos(theta))
             
-        #plt.plot([p1[0], p2[0], p3[0], p4[0], p1[0]], [p1[1], p2[1], p3[1], p4[1], p1[1]])
+        plt.plot([p1[0], p2[0], p3[0], p4[0], p1[0]], [p1[1], p2[1], p3[1], p4[1], p1[1]])
         #plt.axis([-700, 700, -200, 700])
         #plt.show()
         return [p1, p2, p3, p4]
@@ -258,6 +302,7 @@ class safetyNode():
             ypoints.append(top[1])
             
             checkPoints.remove(top)
+
         self.xpt = xpoints[0]
         #plt.ion()    
         #plt.plot(xpoints,ypoints)
