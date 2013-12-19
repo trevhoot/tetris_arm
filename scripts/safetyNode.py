@@ -3,6 +3,9 @@ roslib.load_manifest('tetris_arm')
 import sys
 import rospy
 import os
+import matplotlib.pyplot as plt
+
+from math import *
 
 #for image analysis
 import cv2
@@ -24,7 +27,7 @@ class safetyNode():
         #initiates topics to publish piece state and type to
 
         #Publishes to rospy.Publisher("topic", type of information)
-        self.processedImage_pub = rospy.Publisher("processedImage", Image)
+        #self.processedImage_pub = rospy.Publisher("processedImage", Image)
 
         #placeholder for image
         cv2.namedWindow("Image window", 1)
@@ -33,16 +36,16 @@ class safetyNode():
         
         #if it sees a new image it passes that information on (callback)
         #subscibes to depth image from kinect and passes it to callback fn.
-        self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image,self.callback)
+        #self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image,self.callback)
         
         self.armPosition = position
 
-        self.readySub = rospy.Subscriber("ready", TetArmArray, self.readyTest)
-        self.readyPub = rospy.Publisher("ready", TetArmArray)
-        self.armPub = rospy.Publisher("armCommand", TetArmArray)
-        self.treadmillPub = rospy.Publisher("treadmillMotor", String)
-        self.warningPub = rospy.Publisher("WarningLED", String)
-        self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image, imageProcess)
+        #self.readySub = rospy.Subscriber("ready", TetArmArray, self.readyTest)
+        #self.readyPub = rospy.Publisher("ready", TetArmArray)
+        #self.armPub = rospy.Publisher("armCommand", TetArmArray)
+        #self.treadmillPub = rospy.Publisher("treadmillMotor", String)
+        #self.warningPub = rospy.Publisher("WarningLED", String)
+        #self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image, imageProcess)
     
     def readyTest(self, command):
         x1 = self.armPosition[0]
@@ -54,7 +57,6 @@ class safetyNode():
         workArea, armArea = self.armSpace(x1,y1,x2,y2)
 
         #Map arm position to kinect data...somehow...
-
 
     def imageProcess(self,image):
          #converts ROS Image message pointer to OpenCV message in 16bit mono format
@@ -142,6 +144,49 @@ class safetyNode():
         #self.calibratePub.publish('pix: (%f, %f) to pos (%f, %f)' %(pix_x, pix_y, x, y))
         return x, y
 
+
+def jointAngles(x,y,z):
+    """Returns joint angles of a STR 17 ARM
+
+    x: int, arm units
+    y: int, arm units
+    z: int, arm units
+
+    returns: list of angles (degrees)
+    """
+    #Converts from arm tics to mm
+    x = ticToMm(x)
+    y = ticToMm(y)
+    z = ticToMm(z)
+    
+
+    a = sqrt(x**2 + y**2)
+    b = sqrt(a**2 + z**2)
+#    print b
+    phi = atan2(z,a)
+    psy = atan2(a,z)
+    theta3 = acos(2 - b**2/375**2)
+    chi = (pi - theta3)/2
+#    print phi*(180/pi)
+ #   print psy*(180/pi)
+  #  print chi*(180/pi)
+
+    theta3 = theta3*(180/pi) #Elbow
+    theta1 = atan(x/y)*(180/pi) #Base
+    theta2 = (chi + phi)*(180/pi)+90 #Shoulder
+    theta4 = (chi + psy)*(180/pi) #Wrist
+
+    return [theta1,theta2,theta3,theta4]
+
+def ticToMm(coord):
+    return coord*(355.6/3630)
+
+def mmToTic(coord):
+    return coord*(3630/355.6)
+
+def main():
+    print jointAngles(0,6000,100)
+
 def armLocation(length, theta, position = [0,0]):
     """Finds location of the arm in space relative to the base.
 
@@ -160,7 +205,7 @@ def armLocation(length, theta, position = [0,0]):
         
     plt.plot([p1[0], p2[0], p3[0], p4[0], p1[0]], [p1[1], p2[1], p3[1], p4[1], p1[1]])
     plt.axis([-700, 700, -200, 700])
-
+    plt.show()
     return [p1, p2, p3, p4]
 
 
@@ -179,9 +224,12 @@ def buildWorkspace(start, end):
         ypoints.append(top[1])
         
         checkPoints.remove(top)
-        
+    plt.ion()    
     plt.plot(xpoints,ypoints)
-    #plt.show()
+    plt.show()
+    print "should be showing"
+    raw_input()
+    plt.close()
     return workArea
  
 
@@ -218,8 +266,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
-

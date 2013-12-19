@@ -20,11 +20,6 @@ from rospy.numpy_msg import numpy_msg
 from tetris_arm.msg import ProcessedImage
 from cv_bridge import CvBridge, CvBridgeError
 
-
-#for processing test. Delete when ROS communication works
-
-
-
 """
 dependencies needed for manifest to run: 
 sensor_msgs
@@ -79,7 +74,7 @@ class image_converter:
 	  #extracts the areas that are taller than just under the height of the pieces
     whatisthis, thresh1 = cv2.threshold(crop_image, 240, 250, cv2.THRESH_BINARY)
     #Display image \
-    print thresh1
+    print thresh13
     cv2.imshow("Image window", thresh1)
     cv2.waitKey(3)
     
