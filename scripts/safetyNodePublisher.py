@@ -30,18 +30,26 @@ class safetyNode():
         self.armPub = rospy.Publisher("armCommand", TetArmArray)
         self.treadmillPub = rospy.Publisher("treadmillMotor", String)
         self.warningPub = rospy.Publisher("WarningLED", String)
-        self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image, self.imageProcess)
-        self.midlevelCommand = rospy.Subscriber("destination",TetArmArray, self.passArmCommand)
+        self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image)#, self.imageProcess)
+        self.midlevelCommand = rospy.Subscriber("destination",TetArmArray, self.callback)
+        #self.midlevelCommand = rospy.Subscriber("destination",TetArmArray, self.passArmCommand)
         
+
         self.bridge = CvBridge()
 
         self.emergency = 0
         
         self.armPosition = position
 
-       
+    def callback(self,command): #Runs whenever a new arm command is sent from midlevel
+        safe = False #Assume the area is not clear
+
+        while not safe: #Keep checking until area is clear
+            safe = self.imageProcess(self.image_sub, self.armPosition, command) #Check area
+
+        self.armPosition = command #Set current position to the command that just executed
     
-    def imageProcess(self,image):
+    def imageProcess(self,image, position, command):
          #converts ROS Image message pointer to OpenCV message in 16bit mono format
              #Basically we need to convert the CV image into a numpy array
         try:
@@ -73,10 +81,10 @@ class safetyNode():
         #extracts the areas that are taller than just under the height of the pieces
         whatisthis, thresh1 = cv2.threshold(crop_image, 250, 255, cv2.THRESH_BINARY)
 
-
-        ##################################################SHOULD BE INIPUT##################################################
-        box = self.armSpace(3000,3000,6000,100)
-        #Box is in Smm
+        #Find where the arm is and where it is going (in mm)
+        box = self.armSpace(position[0],position[1], command[0], command[1])  
+        #box = self.armSpace(3000,3000,6000,100)
+        #box is in mm
 
         armArea = box[1]
         armAreaArray = []
@@ -108,17 +116,19 @@ class safetyNode():
         for cnt in contours:
             area = cv2.contourArea(cnt)
             total_area = total_area + area
-
+        #####################Still need to add LED#######################
         if total_area > 9000:                                     # Obsical in arm path
             if self.emergency == 0:             
                 self.treadmillPub.publish("stop")                 # Stop treadmill of emergency state just triggered
             self.emergency = 1                                    # Set emergency state high
+            return False
             print "ermergerd"
         else: 
             if self.emergency == 1:                               # If leaving emergency state start treadmill again
                 self.treadmillPub.publish("go")                   # Start treadmill again
                 self.midlevelCommand.publish(self.pastCommand)    # Send paused command
             self.emergency = 0                                    # Set emergency state low
+            return True
             print "all clear, matey!"
         
         #self.bridge.cv_to_imgmsg(thresh1)
