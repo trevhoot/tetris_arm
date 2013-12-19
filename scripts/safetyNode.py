@@ -1,4 +1,3 @@
-
 import roslib
 roslib.load_manifest('tetris_arm')
 import sys
@@ -129,6 +128,19 @@ class safetyNode():
         elif theta1 > theta2:
             return buildWorkspace(pos2, pos1), pos1
         
+    def pixToPos(self, pix_x, pix_y):
+        # Board cropped to [77:243,230:515] in collectKinectNode.py
+        pix_minx = 0  # Define the limits of the picture
+        pix_maxx = 285
+        pix_miny = 0
+        pix_maxy = 175
+
+        pixtoticks = (self.pos_maxx - self.pos_minx) / (pix_maxy - pix_miny)
+
+        y = (pix_x - pix_minx) * pixtoticks + self.pos_miny
+        x = (pix_y - pix_miny) * pixtoticks + self.pos_minx
+        #self.calibratePub.publish('pix: (%f, %f) to pos (%f, %f)' %(pix_x, pix_y, x, y))
+        return x, y
 
 def armLocation(length, theta, position = [0,0]):
     """Finds location of the arm in space relative to the base.
