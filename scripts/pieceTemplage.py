@@ -1,4 +1,0 @@
-class PieceTemplate:
-
-	name
-	rotation
