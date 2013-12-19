@@ -50,7 +50,7 @@ class MidLevel():
     self.giveUpSub = rospy.Subscriber("giveUp", String, self.giveUp)
 
 
-    self.armPub = rospy.Publisher("armCommand", TetArmArray)      # x,y,orientation
+    self.armPub = rospy.Publisher("destination", TetArmArray)      # x,y,orientation
     self.downPub = rospy.Publisher("downCmd", String)          # drop to pick or place piece of a certain size
     self.newPiecePub = rospy.Publisher("newPiece", String)        # announce newPiece type to highLevel
     self.placedPub = rospy.Publisher("placed", String)          # announce piece is placed to highlevel
@@ -194,12 +194,12 @@ class MidLevel():
 
   def pickPiece(self):
     x, y, th = self.piece.info()
-    #self.printOut.publish('midlevel.pickPiece: /armCommand %f %f %f' %(x, y, th))
+    #self.printOut.publish('midlevel.pickPiece: /destination %f %f %f' %(x, y, th))
     if self.moving == 1:
-      self.printOut.publish('midlevel.pickPiece: Sending /armCommand %f, %f, %f moving = 1' %(x, self.pickupLine, th))
+      self.printOut.publish('midlevel.pickPiece: Sending /destination %f, %f, %f moving = 1' %(x, self.pickupLine, th))
       self.armPub.publish([x, self.pickupLine, th])
     if self.moving == 0:
-      self.printOut.publish('midlevel.pickPiece: Sending /armCommand %f, %f, %f moving = 0' %(x, y, th))
+      self.printOut.publish('midlevel.pickPiece: Sending /destination %f, %f, %f moving = 0' %(x, y, th))
       self.armPub.publish(self.piece.info())
 
   def timingLoop(self, data):      #terrible name; come up with a new one.
@@ -234,7 +234,7 @@ class MidLevel():
         self.printOut.publish('midlevel.timingLoop: Sending /treadmillMotor 0')
 
   def goHome(self):
-    self.printOut.publish('midlevel.goHome: Sending /armCommand 3000, 3000, 0')
+    self.printOut.publish('midlevel.goHome: Sending /destination 3000, 3000, 0')
     self.armPub.publish((3000,3000,0))
     self.printOut.publish('midlevel.goHome: New dummyPiece')
     self.piece = Piece()
