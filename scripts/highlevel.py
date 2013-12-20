@@ -22,7 +22,7 @@ class Board():
 		self.newPieceSub = rospy.Subscriber("newPiece", String, self.newPieceCB) 	# a New piece has entered the field
 		self.placedSub = rospy.Subscriber("placed", String, self.placedCB) 		# the piece has been placed
 
-		self.printOut = rospy.Publisher('print', String)
+		self.printOut = rospy.Publisher('printChoices', String)
 		self.printCommand = rospy.Publisher('AI', String)
 
 	def __repr__(self):
@@ -122,6 +122,7 @@ class Board():
 				choices.append(pointsOption)
 		if choices == []:
 			choices = pointsList
+		self.printOut.publish('choices is %s' %str(choices))
 		return choices
 
 	def choosePlace(self):
@@ -151,6 +152,7 @@ class Board():
 
 	def newPieceCB(self, data):
 		print 'called!', data.data
+
 		piece = data.data
 		self.printOut.publish("highlevel: got a new piece: %s" %piece)
 		self.newPiece(data.data)
@@ -160,7 +162,7 @@ class Board():
 
 	def placedCB(self, data):
 		self.landPiece(self.orientation, self.index)
-		self.printCommand.publish("%s piece placed at %d index in %d orientation" %(self.currPiece, self.index, self.orientation))
+		self.printCommand.publish("%s piece placed at %s index in %s orientation" %(str(self.currPiece), str(self.index), str(self.orientation)))
 
 class Piece():
 	def __init__(self):

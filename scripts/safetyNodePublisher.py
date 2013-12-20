@@ -30,10 +30,15 @@ class safetyNode():
         self.armPub = rospy.Publisher("armCommand", TetArmArray)
         self.treadmillPub = rospy.Publisher("treadmillMotor", String)
         self.warningPub = rospy.Publisher("WarningLED", String)
-        self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image)#, self.imageProcess)
+        self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image, self.storeImage)#, self.imageProcess)
         self.midlevelCommand = rospy.Subscriber("destination",TetArmArray, self.callback)
         #self.midlevelCommand = rospy.Subscriber("destination",TetArmArray, self.passArmCommand)
+
+        self.printPub = rospy.Publisher("print", String)
         
+        cv2.namedWindow("Endangering Obstacles", 1)
+        cv2.namedWindow("armPosition",1)
+        cv2.namedWindow("kinectImage",1)
 
         self.bridge = CvBridge()
 
@@ -41,13 +46,20 @@ class safetyNode():
         
         self.armPosition = position
 
+    def storeImage(self,image): 
+        self.currentImage = image
+
     def callback(self,command): #Runs whenever a new arm command is sent from midlevel
         safe = False #Assume the area is not clear
-
+        self.pastCommand = command.data
         while not safe: #Keep checking until area is clear
-            safe = self.imageProcess(self.image_sub, self.armPosition, command) #Check area
+            self.printPub.publish("SafetyNode.callback: Loop-d-loop!")
+            safe = self.imageProcess(self.currentImage, self.armPosition, command.data) #Check area
+            self.printPub.publish("SafetyNode.callback: save = %s" %str(safe))
 
-        self.armPosition = command #Set current position to the command that just executed
+        self.printPub.publish("SafetyNode.callback: coast is clear, publishing: %s" %str(command.data))
+        self.armPub.publish(command.data)
+        self.armPosition = command.data #Set current position to the command that just executed
     
     def imageProcess(self,image, position, command):
          #converts ROS Image message pointer to OpenCV message in 16bit mono format
@@ -81,6 +93,8 @@ class safetyNode():
         #extracts the areas that are taller than just under the height of the pieces
         whatisthis, thresh1 = cv2.threshold(crop_image, 250, 255, cv2.THRESH_BINARY)
 
+        cv2.imshow("kinectImage", thresh1)
+
         #Find where the arm is and where it is going (in mm)
         box = self.armSpace(position[0],position[1], command[0], command[1])  
         #box = self.armSpace(3000,3000,6000,100)
@@ -108,6 +122,10 @@ class safetyNode():
             workAreaArray.append([int(together[0]),int(together[1])]) 
 
         obstacleImage = self.createArmSpaceImage(sub,np.array(workAreaArray))
+
+        cv2.imshow("Endangering Obstacles", obstacleImage)
+        cv2.waitKey(3)
+
         obstacleImage = obstacleImage.astype(np.uint8)
 
         # finding the area of objects in the working envelope
@@ -117,19 +135,23 @@ class safetyNode():
             area = cv2.contourArea(cnt)
             total_area = total_area + area
         #####################Still need to add LED#######################
-        if total_area > 9000:                                     # Obsical in arm path
-            if self.emergency == 0:             
+        self.printPub.publish("SafetyNode.ImageProcess: total_area %s" %str(total_area))
+        if total_area > 9000: 
+            self.printPub.publish("SafetyNode.ImageProcess: Emergency!")                                    # Obsical in arm path
+            if self.emergency == 0:   
                 self.treadmillPub.publish("stop")                 # Stop treadmill of emergency state just triggered
             self.emergency = 1                                    # Set emergency state high
             return False
             print "ermergerd"
         else: 
+            self.printPub.publish("SafetyNode.ImageProcess: Not an Emergency")
             if self.emergency == 1:                               # If leaving emergency state start treadmill again
                 self.treadmillPub.publish("go")                   # Start treadmill again
-                self.midlevelCommand.publish(self.pastCommand)    # Send paused command
+                self.armPub.publish(self.pastCommand)    # Send paused command
             self.emergency = 0                                    # Set emergency state low
             return True
             print "all clear, matey!"
+
         
         #self.bridge.cv_to_imgmsg(thresh1)
         self.msg = cv.fromarray(thresh1)
@@ -148,7 +170,7 @@ class safetyNode():
         #points should be in form: [[pt1x,pt1y],[pt2x,pt2y],..]
         shape = np.zeros((self.ysize,self.xsize))#, dtype=np.int8)
         cv2.fillConvexPoly(shape, np.array(points), 255, 1)
-
+        cv2.imshow("armPosition", shape)
         return  image1 - shape
 
     def passArmCommand(self,data):

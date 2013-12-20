@@ -74,7 +74,6 @@ class image_converter:
 	  #extracts the areas that are taller than just under the height of the pieces
     whatisthis, thresh1 = cv2.threshold(crop_image, 240, 250, cv2.THRESH_BINARY)
     #Display image \
-    print thresh13
     cv2.imshow("Image window", thresh1)
     cv2.waitKey(3)
     
