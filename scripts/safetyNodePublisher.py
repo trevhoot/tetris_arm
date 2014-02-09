@@ -23,29 +23,33 @@ from cv_bridge import CvBridge, CvBridgeError
 
 
 class safetyNode():
-    def __init__(self, position = [0, 6000, 1000]):
+    def __init__(self, position = [3000, 3000, 0]):
+
         print "init"
 
         #initiates topics to publish piece state and type to
-        self.armPub = rospy.Publisher("armCommand", TetArmArray)
-        self.treadmillPub = rospy.Publisher("treadmillMotor", String)
-        self.warningPub = rospy.Publisher("WarningLED", String)
-        self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image, self.storeImage)#, self.imageProcess)
-        self.midlevelCommand = rospy.Subscriber("destination",TetArmArray, self.callback)
+        self.armPub = rospy.Publisher("armCommand", TetArmArray)             # value it passes through from midbrain when safe
+        self.treadmillPub = rospy.Publisher("treadmillMotor", String)        # treadmill stopped when unsafe, started when safe
+        self.warningPub = rospy.Publisher("WarningLED", String)              # hahahah, doesn't exist yet
+        self.image_sub = rospy.Subscriber("camera/depth/image_raw",Image, self.storeImage)   # raw image
+        self.midlevelCommand = rospy.Subscriber("destination",TetArmArray, self.callback)    # desired arm position from midlevel
         #self.midlevelCommand = rospy.Subscriber("destination",TetArmArray, self.passArmCommand)
+        self.avoidanceDebug = rospy.Publisher("avoidanceDebug", String)
 
-        self.printPub = rospy.Publisher("print", String)
+        self.printPub = rospy.Publisher("print", String)   # debugging
         
-        cv2.namedWindow("Endangering Obstacles", 1)
-        cv2.namedWindow("armPosition",1)
-        cv2.namedWindow("kinectImage",1)
+        cv2.namedWindow("Endangering Obstacles", 1)   #  obstacles in the arm's working area minus arm
+        cv2.namedWindow("armPosition",1)    #  box of where arm is
+        cv2.namedWindow("kinectImage",1)    #  raw image
+        cv2.namedWindow("workArea",1)       #  image of generated work envelope
 
-        self.bridge = CvBridge()
+        self.bridge = CvBridge()        #  to collect CV image and convert it
 
-        self.emergency = 0
+        self.emergency = 0          #   Unsafe flag
         
-        self.armPosition = position
+        self.armPosition = position        #  Where arm currently is
 
+    # Make image class variable
     def storeImage(self,image): 
         self.currentImage = image
 
@@ -54,16 +58,19 @@ class safetyNode():
         self.pastCommand = command.data
         while not safe: #Keep checking until area is clear
             self.printPub.publish("SafetyNode.callback: Loop-d-loop!")
-            safe = self.imageProcess(self.currentImage, self.armPosition, command.data) #Check area
-            self.printPub.publish("SafetyNode.callback: save = %s" %str(safe))
+            safe = self.imageProcess(self.currentImage, self.armPosition, command.data) #Check area, bitwise and with work envelope - arm box
+            self.printPub.publish("SafetyNode.callback: safe = %s" %str(safe))   # debugger notifies unsafe condition
 
-        self.printPub.publish("SafetyNode.callback: coast is clear, publishing: %s" %str(command.data))
-        self.armPub.publish(command.data)
+        self.printPub.publish("SafetyNode.callback: coast is clear, publishing: %s" %str(command.data))   # debugger notifies safe
+        self.armPub.publish(command.data)    #  released command for hindbrain execution
         self.armPosition = command.data #Set current position to the command that just executed
     
     def imageProcess(self,image, position, command):
-         #converts ROS Image message pointer to OpenCV message in 16bit mono format
-             #Basically we need to convert the CV image into a numpy array
+        #converts ROS Image message pointer to OpenCV message in 16bit mono format an dthen publishes it
+            #Basically we need to convert the CV image into a numpy array'''
+
+        self.avoidanceDebug.publish("poke!")
+
         try:
             cv_image = self.bridge.imgmsg_to_cv(image, "16UC1") 
         except CvBridgeError, e:
@@ -94,34 +101,38 @@ class safetyNode():
         whatisthis, thresh1 = cv2.threshold(crop_image, 250, 255, cv2.THRESH_BINARY)
 
         cv2.imshow("kinectImage", thresh1)
+        cv2.waitKey(3)
 
         #Find where the arm is and where it is going (in mm)
         box = self.armSpace(position[0],position[1], command[0], command[1])  
         #box = self.armSpace(3000,3000,6000,100)
         #box is in mm
 
-        armArea = box[1]
-        armAreaArray = []
+        armArea = box[1]    #   box[1] = area of arm's current position
+        armAreaArray = []   #   armArea in pixels
         for point in armArea:
             xinpix = self.mmToTic(point[0])
             yinpix = self.mmToTic(point[1])
             together = self.ticToPix(xinpix,yinpix)
             armAreaArray.append([int(together[0]),int(together[1])]) 
 
-            cv2.circle(thresh1, self.ticToPix(self.mmToTic(point[0]),self.mmToTic(point[1])), 5, (200,200,255))
+            #  draws circles at points of the arm's location's box on thresh1
+            cv2.circle(thresh1, self.ticToPix(self.mmToTic(point[0]),self.mmToTic(point[1])), 5, (200,200,255))  
 
-        sub = self.subtractShape(thresh1, np.array(armAreaArray))        
+        sub = self.subtractShape(thresh1, np.array(armAreaArray, 'int32'))     # This is everything that is not arm in raw image   
 
-        workArea = box[0]
+        workArea = box[0]  # box[0] = area of arm's work envelope
         workAreaArray = []
 
         for point in workArea:
             xinpix = self.mmToTic(point[0])
             yinpix = self.mmToTic(point[1])
             together = self.ticToPix(xinpix,yinpix)
-            workAreaArray.append([int(together[0]),int(together[1])]) 
+            workAreaArray.append([abs(int(together[0])),abs(int(together[1]))]) 
 
-        obstacleImage = self.createArmSpaceImage(sub,np.array(workAreaArray))
+        workAreaArray = [ (100, 100), (100,200), (200,100), (200,200) ]
+
+        obstacleImage = self.createArmSpaceImage(sub,np.array(workAreaArray, 'int32'))  # image of filled arm envelope
 
         cv2.imshow("Endangering Obstacles", obstacleImage)
         cv2.waitKey(3)
@@ -157,23 +168,40 @@ class safetyNode():
         self.msg = cv.fromarray(thresh1)
 
     def createArmSpaceImage(self,image1,points):
-        workArea = np.zeros((self.ysize,self.xsize))
+        workArea = np.zeros((self.ysize,self.xsize), dtype = 'int32')
 
-        cv2.fillConvexPoly(workArea, np.array(points), 255,1)
-        cv2.imshow("otherArea", workArea)
-        workArea = workArea.astype(np.int16)
-        image1 = image1.astype(np.int16)
+        self.avoidanceDebug.publish("work area image is:" + str(workArea))
+        self.avoidanceDebug.publish("dtype raw: " + str(image1.dtype))
+        self.avoidanceDebug.publish("dtype arm space image empy: " + str(workArea.dtype))
+        self.avoidanceDebug.publish("points are " + str(points))
+
+        cv2.fillConvexPoly(workArea, points, 255,1)  # 255, 1
+        self.avoidanceDebug.publish("dtype arm space filled: " + str(workArea.dtype))
+
+        cv2.imshow("workArea", workArea)
+        cv2.waitKey(3)
         
         return workArea.__and__(image1)
 
+    #  Takes raw image and subtracts the area of the arm
     def subtractShape(self, image1, points):
-        #points should be in form: [[pt1x,pt1y],[pt2x,pt2y],..]
-        shape = np.zeros((self.ysize,self.xsize))#, dtype=np.int8)
-        cv2.fillConvexPoly(shape, np.array(points), 255, 1)
-        cv2.imshow("armPosition", shape)
-        return  image1 - shape
+        # image1 is raw image from kinect
+        #points should be in form: [[pt1x,pt1y],[pt2x,pt2y],..], indexes of shape of current arm position
 
-    def passArmCommand(self,data):
+        shape = np.zeros((self.ysize,self.xsize), dtype=np.int32)
+
+        cv2.fillConvexPoly(shape, points, 255,1)    #  fills in a solid square shape of current
+                                                               #  arm position based on input vertexes
+
+        self.avoidanceDebug.publish(str(type(shape)))
+        self.avoidanceDebug.publish(str(type(image1)))
+        cv2.imshow("armPosition", shape )  # displays filled arm box
+        cv2.waitKey(3)
+
+        return  image1 - shape    #  image with arm subtracted
+
+    # If emergency, store commend. Else, pubish it for midbrain
+    def passArmCommand(self,data): 
         if self.emergency == 0:
             self.midlevelCommand.publish(data)
         else:
@@ -225,8 +253,9 @@ class safetyNode():
 
         tickstopix = (pix_maxy - pix_miny) / (pos_maxx - pos_minx)
 
-        y = pix_minx + (tick_y + 1550 - pos_miny) * tickstopix
-        x = pix_miny + (tick_x - pos_minx) * tickstopix
+        #TODO should these be switched?
+        x = pix_minx + (tick_y + 1550 - pos_miny) * tickstopix
+        y = pix_miny + (tick_x - pos_minx) * tickstopix
         #self.calibratePub.publish('pix: (%f, %f) to pos (%f, %f)' %(pix_x, pix_y, x, y))
         return int(x) - 130, int(y) + 303    #used to be -73 for x
 
@@ -283,7 +312,7 @@ class safetyNode():
         p3 = (p2[0]-width*cos(theta),p2[1]+width*sin(theta))
         p4 = (p3[0]+length*sin(theta),p3[1]+length*cos(theta))
             
-        plt.plot([p1[0], p2[0], p3[0], p4[0], p1[0]], [p1[1], p2[1], p3[1], p4[1], p1[1]])
+        #plt.plot([p1[0], p2[0], p3[0], p4[0], p1[0]], [p1[1], p2[1], p3[1], p4[1], p1[1]])
         #plt.axis([-700, 700, -200, 700])
         #plt.show()
         return [p1, p2, p3, p4]
@@ -307,6 +336,7 @@ class safetyNode():
         self.xpt = xpoints[0]
         #plt.ion()    
         #plt.plot(xpoints,ypoints)
+        #plt.axis([-700, 700, -200, 700])
         #plt.show()
         return workArea
      
