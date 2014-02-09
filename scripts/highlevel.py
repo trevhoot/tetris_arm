@@ -72,10 +72,11 @@ class Board():
 			else: height +=1
 			if height >= 20:
 				print "the piece is too damn high!"
-				return 0
+				return 20, []
 		return height, blocks
 
 	def contactPoints(self, blocks):
+	# returns number of faces on board adjacent to this piece
 		points = 0
 		print 'current piece blocks are:', blocks
 		for x, y in blocks:	
