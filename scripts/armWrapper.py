@@ -27,7 +27,7 @@ class ArmWrapper():
 		print 'set up pubsubs'
 
 		if arm == 0:
-			self.arm = st.StArm(dev = '/dev/ttyUSB0', init = False, to = 0.1)
+			#self.arm = st.StArm(dev = '/dev/ttyUSB0', init = False, to = 0.1)
 			# Initializes comunication to arm (tests reasonable possible port names)
 			try:
 				self.arm = st.StArm(dev = '/dev/ttyUSB1', init = False, to = 0.1)
@@ -61,6 +61,7 @@ class ArmWrapper():
 		# start hand and wrist at the right angle
 		self.arm.rotate_hand(1800)
 		self.gripperOrientation = 0
+		self.printOut.publish('gripperOrientation is %d' %self.gripperOrientation)
 		self.arm.rotate_wrist(1000)   #vertical	
 		self.arm.lock_wrist_angle()
 

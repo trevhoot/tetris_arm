@@ -16,7 +16,7 @@ i, l, j, o, z, s, t = 'I', 'L', 'J', 'O', 'Z', 'S', 'T'
 
 class MidLevel():
   def __init__(self):
-    
+    self.safe = "destination" #"armCommand" #"destination"
     dummyPiece = Piece()        # initializes first piece as X to detect change
     self.piece = dummyPiece
     self.letterList = [i, l, j, o, z, s, t]    # letter seen by camera comes in as an index in this list
@@ -45,18 +45,16 @@ class MidLevel():
     self.doneSub = rospy.Subscriber("inPosition", String, self.timingLoop)      # Get when arm is finished moving from low level
     self.gripperSub = rospy.Subscriber("actuated", String, self.afterGripper)    # Get when gripper is done actuating (and status)
     self.treadmillSub = rospy.Subscriber("treadmillDone", String, self.afterTreadmill)  # Get when treadmill is done changing
-    self.speedSub = rospy.Subscriber("beltSpeed", UInt16, self.updatePickupTime)  #TODO why is this a subscriber and not a method call?
     self.tickSub = rospy.Subscriber("encoderTick", String, self.calculateSpeed)        # Every time magnet passes reed switch
     self.giveUpSub = rospy.Subscriber("giveUp", String, self.giveUp)
 
 
-    self.armPub = rospy.Publisher("destination", TetArmArray)      # x,y,orientation
+    self.armPub = rospy.Publisher(self.safe, TetArmArray)      # x,y,orientation
     self.downPub = rospy.Publisher("downCmd", String)          # drop to pick or place piece of a certain size
     self.newPiecePub = rospy.Publisher("newPiece", String)        # announce newPiece type to highLevel
     self.placedPub = rospy.Publisher("placed", String)          # announce piece is placed to highlevel
     self.treadmillPub = rospy.Publisher("treadmillMotor", String)    # send speed command to arduino
     self.timingPub = rospy.Publisher("inPosition", String)        # publish to self to call functions asynchronously
-    self.speedPub = rospy.Publisher("beltSpeed", UInt16)    #TODO why is this a publisher and not a method call? 
 
 
     #TODO get rid of these debugging publishers and test subscribers.
@@ -65,6 +63,7 @@ class MidLevel():
     self.calibrateSub = rospy.Subscriber("calibrate", String, self.calibrate)
     self.pickupTimeSub = rospy.Subscriber("pickupTime", UInt16, self.setPickupTime)
     self.debugMovingPub = rospy.Publisher("debugMoving", String)         #for debugging with treadmill on
+    self.placementPub = rospy.Publisher("placement", String)
 
     self.toTreadmill("go")       # makes treadmill 
 
@@ -99,7 +98,7 @@ class MidLevel():
     alpha = .98
     if deltaTime > 400: 
       currentAvg = 0
-      self.speedPub.publish(0)
+      self.updatePickupTime(0)
       return
     if self.pastAvg ==0: self.pastAvg = deltaTime
     currentAvg = alpha*self.pastAvg + (1-alpha)*deltaTime
@@ -107,15 +106,16 @@ class MidLevel():
     #self.speedPub.publish(self.distPerTick/(currentAvg/1000))
 
     #if (currentAvg - self.pastAvg > 5):     
-    self.speedPub.publish(int(jointAngles.mmToTic(currentAvg)))     #set it in ticks per second & publish
+    self.debugMovingPub.publish("current speed is %s" %str(jointAngles.mmToTic(currentAvg)))
+    self.updatePickupTime(int(jointAngles.mmToTic(currentAvg)))     #set it in ticks per second & publish
     self.pastAvg = currentAvg
 
     self.debugMovingPub.publish("current speed in ticks %s" %str(jointAngles.mmToTic(currentAvg)))
     self.debugMovingPub.publish("current threshold %s" %str(self.threshold))
 
-  def updatePickupTime(self, data):
-    treadmillSpeed = data.data
-    if abs(treadmillSpeed - self.treadmillSpeed) < 10:
+  def updatePickupTime(self, treadmillSpeed):
+    
+    if abs(treadmillSpeed - self.treadmillSpeed) < 1:
       return
     self.treadmillSpeed = treadmillSpeed
     if treadmillSpeed == 0:
@@ -126,9 +126,10 @@ class MidLevel():
       self.moving = 1
       self.threshold = 7300
       deltaThreshold = self.threshold - 6000
-      dropTime = .3
+      dropTime = .35
       self.pickupTime = (deltaThreshold / treadmillSpeed ) - dropTime
-      if self.pickupTime < 0: self.pickupTime = 0
+      if self.pickupTime < 0: 
+        self.pickupTime = 0
 
     #self.printOut.publish('midlevel.updateThreshold: threshold is %s' %str(self.threshold))
     self.debugMovingPub.publish('midlevel.updatePickupTime: pickup time is %f' %self.pickupTime)
@@ -166,8 +167,8 @@ class MidLevel():
     orientation, index = data.data
     orientation = (orientation + 1)%4  # Pieces are 90 degrees off
     beltWidth = self.pos_maxx - self.pos_minx
-    x = int((index+0.5)*(beltWidth/10.)+self.pos_minx) #maps [0 to 10] to [pos_minx to pos_maxx]
-    self.printOut.publish('midlevel.setPiecePlacement: Received /DownCommand, set piece To-Data to %d, %d' %(x, orientation))
+    x = int((index+1)*(beltWidth/10.)+self.pos_minx) #maps [0 to 10] to [pos_minx to pos_maxx]
+    self.placementPub.publish('midlevel.setPiecePlacement: Received /DownCommand, set piece To-Data to %d, %d' %(x, orientation))
     self.piece.toOrientation = orientation
     self.piece.toX = x
 
@@ -209,7 +210,7 @@ class MidLevel():
     if data.data == 'stopped':
       self.printOut.publish('midlevel.timingLoop: Recieved /inPosition %s' %data.data)
       self.inPosition = 1
-      self.printOut.publish('midlevel.timingXLoop: Set self.inPosition = 1, holding = %d, moving = %d' %(self.holding, self.moving))
+      self.printOut.publish('midlevel.timingLoop: Set self.inPosition = 1, holding = %d, moving = %d' %(self.holding, self.moving))
       if self.holding == 1:
         self.timingPub.publish("now")
       if self.moving == 0:
