@@ -99,7 +99,7 @@ class safetyNode():
 
         #extracts the areas that are taller than just under the height of the pieces
         whatisthis, thresh1 = cv2.threshold(crop_image, 250, 255, cv2.THRESH_BINARY)
-
+        self.rawCamera = thresh1.__xor__(thresh1)
         cv2.imshow("kinectImage", thresh1)
         cv2.waitKey(3)
 
@@ -174,7 +174,7 @@ class safetyNode():
         self.avoidanceDebug.publish("dtype raw: " + str(image1.dtype))
         self.avoidanceDebug.publish("dtype arm space image empy: " + str(workArea.dtype))
         self.avoidanceDebug.publish("points are " + str(points))
-
+        workArea = self.rawCamera
         cv2.fillConvexPoly(workArea, points, 255,1)  # 255, 1
         self.avoidanceDebug.publish("dtype arm space filled: " + str(workArea.dtype))
 
@@ -188,8 +188,8 @@ class safetyNode():
         # image1 is raw image from kinect
         #points should be in form: [[pt1x,pt1y],[pt2x,pt2y],..], indexes of shape of current arm position
 
-        shape = np.zeros((self.ysize,self.xsize), dtype=np.int32)
-
+        shape = np.zeros((self.ysize,self.xsize), dtype=np.int32)   
+        shape = self.rawCamera
         cv2.fillConvexPoly(shape, points, 255,1)    #  fills in a solid square shape of current
                                                                #  arm position based on input vertexes
 
