@@ -105,9 +105,12 @@ class safetyNode():
 
         #Find where the arm is and where it is going (in mm)
         box = self.armSpace(position[0],position[1], command[0], command[1])  
+        self.printPub.publish('Current Pos ' + str(position[0]) + ' ' + str(position[1]))
+        self.printPub.publish('Target' + str(command[0]) + ' ' + str(command[1]))
         #box = self.armSpace(3000,3000,6000,100)
         #box is in mm
-
+        self.printPub.publish('armArea' + str(box[1]))
+        self.printPub.publish('workArea' + str(box[0]))
         armArea = box[1]    #   box[1] = area of arm's current position
         armAreaArray = []   #   armArea in pixels
         for point in armArea:
@@ -115,9 +118,9 @@ class safetyNode():
             yinpix = self.mmToTic(point[1])
             together = self.ticToPix(xinpix,yinpix)
             armAreaArray.append([int(together[0]),int(together[1])]) 
-
+        self.printPub.publish('armAreaArray' + str(armAreaArray))
             #  draws circles at points of the arm's location's box on thresh1
-            cv2.circle(thresh1, self.ticToPix(self.mmToTic(point[0]),self.mmToTic(point[1])), 5, (200,200,255))  
+            #cv2.circle(thresh1, self.ticToPix(self.mmToTic(point[0]),self.mmToTic(point[1])), 5, (200,200,255))  
 
         sub = self.subtractShape(thresh1, np.array(armAreaArray, 'int32'))     # This is everything that is not arm in raw image   
 
@@ -128,10 +131,8 @@ class safetyNode():
             xinpix = self.mmToTic(point[0])
             yinpix = self.mmToTic(point[1])
             together = self.ticToPix(xinpix,yinpix)
-            workAreaArray.append([abs(int(together[0])),abs(int(together[1]))]) 
-
-        workAreaArray = [ (100, 100), (100,200), (200,100), (200,200) ]
-
+            workAreaArray.append([int(together[0]),int(together[1])]) 
+        self.printPub.publish('workAreaArray' + str(workAreaArray))
         obstacleImage = self.createArmSpaceImage(sub,np.array(workAreaArray, 'int32'))  # image of filled arm envelope
 
         cv2.imshow("Endangering Obstacles", obstacleImage)
@@ -168,15 +169,9 @@ class safetyNode():
         self.msg = cv.fromarray(thresh1)
 
     def createArmSpaceImage(self,image1,points):
-        workArea = np.zeros((self.ysize,self.xsize), dtype = 'int32')
-
-        self.avoidanceDebug.publish("work area image is:" + str(workArea))
-        self.avoidanceDebug.publish("dtype raw: " + str(image1.dtype))
-        self.avoidanceDebug.publish("dtype arm space image empy: " + str(workArea.dtype))
-        self.avoidanceDebug.publish("points are " + str(points))
+        self.printPub.publish('workAreapix' + str(points))
         workArea = self.rawCamera
-        cv2.fillConvexPoly(workArea, points, 255,1)  # 255, 1
-        self.avoidanceDebug.publish("dtype arm space filled: " + str(workArea.dtype))
+        cv2.fillPoly(workArea, [points], 255,1)  # 255, 1
 
         cv2.imshow("workArea", workArea)
         cv2.waitKey(3)
@@ -188,13 +183,9 @@ class safetyNode():
         # image1 is raw image from kinect
         #points should be in form: [[pt1x,pt1y],[pt2x,pt2y],..], indexes of shape of current arm position
 
-        shape = np.zeros((self.ysize,self.xsize), dtype=np.int32)   
         shape = self.rawCamera
         cv2.fillConvexPoly(shape, points, 255,1)    #  fills in a solid square shape of current
                                                                #  arm position based on input vertexes
-
-        self.avoidanceDebug.publish(str(type(shape)))
-        self.avoidanceDebug.publish(str(type(image1)))
         cv2.imshow("armPosition", shape )  # displays filled arm box
         cv2.waitKey(3)
 
@@ -225,7 +216,7 @@ class safetyNode():
 
         length1 = dist1 + 40 #length from base to end of arm
         length2 = dist2 + 40 #length from base to end of arm
-
+        print 'Start angle', theta1, 'End angle', theta2
         pos1 = self.armLocation(length1,theta1,[x1,y1])
         pos2 = self.armLocation(length2,theta2,[x2,y2])
 
@@ -239,6 +230,8 @@ class safetyNode():
     def ticToPix(self, tick_x, tick_y):
         # Board cropped to [77:243,230:515] in collectKinectNode.py
 
+
+        # constants based on known values to create ratio
         pos_minx = -1490. #-1550    #-1500 actual tested value
         pos_maxx = 2050.     #1700 acutal tested value
         pos_miny = 5470.
@@ -251,13 +244,24 @@ class safetyNode():
         pix_miny = 0.
         pix_maxy = 175.
 
+
         tickstopix = (pix_maxy - pix_miny) / (pos_maxx - pos_minx)
 
+        # Constants backed on current refference frame
+        ticx_translation = -2000
+        ticy_translation = 2000
+        
+        pix_x = (tick_y - ticy_translation)*tickstopix
+        pix_y = (tick_x + ticx_translation)*tickstopix
+        return pix_x, pix_y
+        """
         #TODO should these be switched?
-        x = pix_minx + (tick_y + 1550 - pos_miny) * tickstopix
-        y = pix_miny + (tick_x - pos_minx) * tickstopix
+        x = (tick_y + 1550 - pos_miny) * tickstopix
+        y = (tick_x - pos_minx) * tickstopix
         #self.calibratePub.publish('pix: (%f, %f) to pos (%f, %f)' %(pix_x, pix_y, x, y))
         return int(x) - 130, int(y) + 303    #used to be -73 for x
+        """
+        
 
 
     def jointAngles(self,x,y,z):
