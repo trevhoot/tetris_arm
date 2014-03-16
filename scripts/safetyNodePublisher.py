@@ -138,20 +138,27 @@ class safetyNode():
         cv2.imshow("Endangering Obstacles", obstacleImage)
         cv2.waitKey(3)
 
+
+        self.printPub.publish("first slice: " + str(obstacleImage[40]))
+
+        whatisthis, obstacleImageThreshed = cv2.threshold(obstacleImage, 250, 255, cv2.THRESH_BINARY)
+
+        self.printPub.publish("slice: " + str(obstacleImageThreshed[40]))
+
         #obstacleImage = obstacleImage.astype(np.uint8)
 
         # finding the area of objects in the working envelope
-        contours, hierarchy = cv2.findContours(obstacleImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(obstacleImageThreshed, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         total_area = 0
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            self.printPub.publish("contour: " + str(cnt) + " ------- Area: " + area)
+            self.printPub.publish("Area: " + str(area))
             total_area = total_area + area
 
 
         #####################Still need to add LED#######################
         self.printPub.publish("SafetyNode.ImageProcess: total_area %s" %str(total_area))
-        if total_area > 9000: 
+        if total_area > 200: 
             self.printPub.publish("SafetyNode.ImageProcess: Emergency!")                                    # Obsical in arm path
             if self.emergency == 0:   
                 self.treadmillPub.publish("stop")                 # Stop treadmill of emergency state just triggered
@@ -318,7 +325,7 @@ class safetyNode():
         #width = 300
         
         #dx = 175
-        dy = 110
+        dy = 130
         
         #p1 = (position[0]+dx*cos(theta)+dy*cos(pi/2 - theta),position[1]-dx*sin(theta)+dy*sin(pi/2 - theta))
         #p2 = (p1[0]-length*sin(theta),p1[1]-length*cos(theta))
