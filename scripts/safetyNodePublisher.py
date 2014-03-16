@@ -138,14 +138,17 @@ class safetyNode():
         cv2.imshow("Endangering Obstacles", obstacleImage)
         cv2.waitKey(3)
 
-        obstacleImage = obstacleImage.astype(np.uint8)
+        #obstacleImage = obstacleImage.astype(np.uint8)
 
         # finding the area of objects in the working envelope
         contours, hierarchy = cv2.findContours(obstacleImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         total_area = 0
         for cnt in contours:
             area = cv2.contourArea(cnt)
+            self.printPub.publish("contour: " + str(cnt) + " ------- Area: " + area)
             total_area = total_area + area
+
+
         #####################Still need to add LED#######################
         self.printPub.publish("SafetyNode.ImageProcess: total_area %s" %str(total_area))
         if total_area > 9000: 
@@ -154,7 +157,7 @@ class safetyNode():
                 self.treadmillPub.publish("stop")                 # Stop treadmill of emergency state just triggered
             self.emergency = 1                                    # Set emergency state high
             return False
-            print "ermergerd"
+
         else: 
             self.printPub.publish("SafetyNode.ImageProcess: Not an Emergency")
             if self.emergency == 1:                               # If leaving emergency state start treadmill again
@@ -162,9 +165,7 @@ class safetyNode():
                 self.armPub.publish(self.pastCommand)    # Send paused command
             self.emergency = 0                                    # Set emergency state low
             return True
-            print "all clear, matey!"
 
-        
         #self.bridge.cv_to_imgmsg(thresh1)
         self.msg = cv.fromarray(thresh1)
 
@@ -248,8 +249,8 @@ class safetyNode():
         tickstopix = (pix_maxy - pix_miny) / (pos_maxx - pos_minx)
 
         # Constants backed on current refference frame
-        ticx_translation = -2000
-        ticy_translation = 2000
+        ticx_translation = 2400
+        ticy_translation = 2400
         
         pix_x = (tick_y - ticy_translation)*tickstopix
         pix_y = (tick_x + ticx_translation)*tickstopix
@@ -308,18 +309,34 @@ class safetyNode():
         position : x,y location of the end effector
         """
         #print "Angle:",theta
+        
         width = 263.5
         dx = 125
-        dy = 40
+        #dy = 40
+        bumpx = 150
+        bumpy = length/2
+        #width = 300
+        
+        #dx = 175
+        dy = 110
+        
+        #p1 = (position[0]+dx*cos(theta)+dy*cos(pi/2 - theta),position[1]-dx*sin(theta)+dy*sin(pi/2 - theta))
+        #p2 = (p1[0]-length*sin(theta),p1[1]-length*cos(theta))
+        #p3 = (p2[0]-width*cos(theta),p2[1]+width*sin(theta))
+        #p4 = (p3[0]+length*sin(theta),p3[1]+length*cos(theta))
+
         p1 = (position[0]+dx*cos(theta)+dy*cos(pi/2 - theta),position[1]-dx*sin(theta)+dy*sin(pi/2 - theta))
         p2 = (p1[0]-length*sin(theta),p1[1]-length*cos(theta))
-        p3 = (p2[0]-width*cos(theta),p2[1]+width*sin(theta))
-        p4 = (p3[0]+length*sin(theta),p3[1]+length*cos(theta))
+        p3 = (p2[0]-(width+bumpx)*cos(theta),p2[1]+(width+bumpx)*sin(theta))
+        p4 = (p3[0]+bumpy*sin(theta),p3[1]+bumpy*cos(theta))
+        p5 = (p4[0]+bumpx*cos(theta),p4[1]-bumpx*sin(theta))
+        p6 = (p5[0]+(length-bumpy)*sin(theta),p4[1]+(length-bumpy)*cos(theta))
+
             
         #plt.plot([p1[0], p2[0], p3[0], p4[0], p1[0]], [p1[1], p2[1], p3[1], p4[1], p1[1]])
         #plt.axis([-700, 700, -200, 700])
         #plt.show()
-        return [p1, p2, p3, p4]
+        return [p1, p2, p3, p4, p5, p6]
 
 
     def buildWorkspace(self,start, end):

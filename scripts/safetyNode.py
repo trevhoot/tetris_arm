@@ -19,7 +19,6 @@ from sensor_msgs.msg import Image
 from rospy.numpy_msg import numpy_msg
 from cv_bridge import CvBridge, CvBridgeError
 
-
 class safetyNode():
     def __init__(self, position = [0, 6000, 1000]):
         print "init"
@@ -87,9 +86,10 @@ class safetyNode():
 
         #extracts the areas that are taller than just under the height of the pieces
         whatisthis, thresh1 = cv2.threshold(crop_image, 240, 250, cv2.THRESH_BINARY)
-        #Display image \
-        print thresh1
-        cv2.imshow("Image window", thresh1)
+        #Display image
+        print rawCamera
+        self.rawCamera = cv.absdiff(rawCamera,rawCamera)
+        cv2.imshow("Image window", rawCamera)
         cv2.waitKey(3)
         
         #self.bridge.cv_to_imgmsg(thresh1)

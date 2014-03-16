@@ -75,12 +75,17 @@ class StArm():
 
     def __init__(self, dev=DEFAULT_DEV, baud=DEFAULT_BAUD_RATE,
                  init=True, to=DEFAULT_TIMEOUT):
-        try:
-            dev = '/dev/ttyUSB0'
-            self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
-        except:
-            dev = '/dev/ttyUSB1'
-            self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
+
+        possiblePorts = ['/dev/ttyUSB0', '/dev/ttyUSB1','/dev/ttyUSB2', '/dev/ttyUSB3', '/dev/ttyUSB4']
+
+        for port in possiblePorts:
+            try:
+                dev = port
+                self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
+                break
+            except:
+                pass
+
         # TODO
         # Check and parse return values of all ROBOFORTH methods called.
         if init:
@@ -101,7 +106,9 @@ class StArm():
         cmd = PURGE
         print('Purging...')
         self.cxn.flushInput()
+        print('flush')
         self.cxn.write(cmd + CR)
+        print('write')
         self.block_on_result(cmd)
 
     def roboforth(self):
