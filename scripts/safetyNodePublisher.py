@@ -229,7 +229,7 @@ class safetyNode():
         pos2 = self.armLocation(length2,theta2,[x2,y2])
 
         if theta1 == theta2:
-            return pos1
+            return pos1, pos1
         elif theta1 < theta2:
             return self.buildWorkspace(pos1, pos2), pos1
         elif theta1 > theta2:
@@ -317,7 +317,7 @@ class safetyNode():
         """
         #print "Angle:",theta
         
-        width = 263.5
+        width = 300
         dx = 125
         #dy = 40
         bumpx = 150
@@ -325,7 +325,7 @@ class safetyNode():
         #width = 300
         
         #dx = 175
-        dy = 130
+        dy = 170
         
         #p1 = (position[0]+dx*cos(theta)+dy*cos(pi/2 - theta),position[1]-dx*sin(theta)+dy*sin(pi/2 - theta))
         #p2 = (p1[0]-length*sin(theta),p1[1]-length*cos(theta))
@@ -337,7 +337,7 @@ class safetyNode():
         p3 = (p2[0]-(width+bumpx)*cos(theta),p2[1]+(width+bumpx)*sin(theta))
         p4 = (p3[0]+bumpy*sin(theta),p3[1]+bumpy*cos(theta))
         p5 = (p4[0]+bumpx*cos(theta),p4[1]-bumpx*sin(theta))
-        p6 = (p5[0]+(length-bumpy)*sin(theta),p4[1]+(length-bumpy)*cos(theta))
+        p6 = (p5[0]+(length-bumpy)*sin(theta),p5[1]+(length-bumpy)*cos(theta))
 
             
         #plt.plot([p1[0], p2[0], p3[0], p4[0], p1[0]], [p1[1], p2[1], p3[1], p4[1], p1[1]])
